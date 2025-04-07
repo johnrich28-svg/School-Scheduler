@@ -16,6 +16,13 @@ const {
   deleteYear,
   searchYears,
 } = require("../../controllers/adminYearController");
+const {
+  createSection,
+  getSections,
+  updateSection,
+  deleteSection,
+  searchSections,
+} = require("../../controllers/adminSectionController");
 
 // Admin Approve User
 router.put("/approve-user/:id", protect, isAdmin, approveUser);
@@ -33,5 +40,12 @@ router.get("/get-year", protect, isAdmin, getAllYears);
 router.put("/update-year/:id", protect, isAdmin, updateYear);
 router.delete("/delete-year/:id", protect, isAdmin, deleteYear);
 router.get("/search-year/:search", protect, isAdmin, searchYears);
+
+// Admin CRUD for Sections
+router.post("/create-section", protect, isAdmin, createSection);
+router.get("/get-section", protect, isAdmin, getSections);
+router.put("/update-section/:id", protect, isAdmin, updateSection);
+router.delete("/delete-section/:id", protect, isAdmin, deleteSection);
+router.get("/search-section/:search", protect, isAdmin, searchSections);
 
 module.exports = router;

@@ -1,4 +1,4 @@
-const Years = require("../models/Years");
+const Years = require("../models/YearLevel");
 
 // CREATE Year
 const createYear = async (req, res) => {

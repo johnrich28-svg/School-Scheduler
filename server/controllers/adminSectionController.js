@@ -1,11 +1,12 @@
 const Section = require("../models/Sections");
 const Course = require("../models/Courses");
+const Year = require("../models/YearLevel"); // Assuming you have a Year model
 
 // Create a new Section
 const createSection = async (req, res) => {
-  const { name, courseId, order, capacity } = req.body;
+  const { name, courseId, yearId, order, capacity } = req.body;
 
-  if (!name || !courseId || !capacity) {
+  if (!name || !courseId || !yearId || !capacity) {
     return res.status(400).json({ message: "All fields are required" });
   }
 
@@ -16,18 +17,25 @@ const createSection = async (req, res) => {
       return res.status(400).json({ message: "Course not found" });
     }
 
-    // Check if the section name already exists for the same course (duplicate check)
-    const existingSection = await Section.findOne({ name, courseId });
+    // Check if the year exists
+    const year = await Year.findById(yearId);
+    if (!year) {
+      return res.status(400).json({ message: "Year not found" });
+    }
+
+    // Check if the section name already exists for the same course and year (duplicate check)
+    const existingSection = await Section.findOne({ name, courseId, yearId });
     if (existingSection) {
-      return res
-        .status(400)
-        .json({ message: "Section name already exists for this course" });
+      return res.status(400).json({
+        message: "Section name already exists for this course and year",
+      });
     }
 
     // Create new section
     const section = new Section({
       name,
       courseId,
+      yearId, // Adding the year reference to the section
       order: order || 0, // Default order is 0
       capacity, // Set the capacity (max students)
     });
@@ -51,23 +59,44 @@ const getSections = async (req, res) => {
 
 // Update Section
 const updateSection = async (req, res) => {
-  const { name, courseId, order, capacity } = req.body;
+  const { name, courseId, yearId, order, capacity } = req.body;
 
   try {
-    const section = await Section.findById(req.params.id);
+    // Validate courseId if provided
+    if (courseId) {
+      const course = await Course.findById(courseId);
+      if (!course) {
+        return res.status(400).json({ message: "Course not found" });
+      }
+    }
 
-    if (!section) {
+    // Validate yearId if provided
+    if (yearId) {
+      const year = await Year.findById(yearId);
+      if (!year) {
+        return res.status(400).json({ message: "Year not found" });
+      }
+    }
+
+    // Safely update using $set
+    const updatedSection = await Section.findByIdAndUpdate(
+      req.params.id,
+      { $set: req.body },
+      {
+        new: true, // return the updated document
+        runValidators: true, // apply schema validation
+        context: "query", // required for validators like max
+      }
+    );
+
+    if (!updatedSection) {
       return res.status(404).json({ message: "Section not found" });
     }
 
-    // Optionally update fields if provided
-    section.name = name || section.name;
-    section.courseId = courseId || section.courseId;
-    section.order = order || section.order;
-    section.capacity = capacity || section.capacity;
-
-    await section.save();
-    res.json({ message: "Section updated successfully", section });
+    res.json({
+      message: "Section updated successfully",
+      section: updatedSection,
+    });
   } catch (error) {
     res.status(500).json({ message: "Server error", error: error.message });
   }

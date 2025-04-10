@@ -10,6 +10,11 @@ const sectionSchema = new mongoose.Schema({
     ref: "Course", // References the Course model
     required: true, // You must assign a course to each section
   },
+  yearId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Year", // References the Year model
+    required: true, // You must assign a year to each section
+  },
   order: {
     type: Number,
     default: 0,

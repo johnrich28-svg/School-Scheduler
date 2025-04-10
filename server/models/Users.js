@@ -7,36 +7,113 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+
     email: {
       type: String,
       required: true,
       unique: true,
     },
+
     password: {
       type: String,
       required: true,
     },
+
     role: {
       type: String,
       enum: ["superadmin", "admin", "professor", "student"],
       required: true,
     },
+
     isApproved: {
       type: Boolean,
-      default: false, // Default to false (pending approval)
+      default: false,
     },
+
+    requestedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
+
+    // ---------- Student-specific ----------
+    studentType: {
+      type: String,
+      enum: ["regular", "irregular"],
+      required: function () {
+        return this.role === "student";
+      },
+    },
+
+    courseId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Course",
+      required: function () {
+        return this.role === "student" && this.studentType === "regular";
+      },
+    },
+
+    sectionId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Section",
+      required: function () {
+        return this.role === "student" && this.studentType === "regular";
+      },
+    },
+
+    semester: {
+      type: String,
+      enum: ["1st", "2nd"],
+      required: function () {
+        return this.role === "student" && this.studentType === "regular";
+      },
+    },
+
+    passedSubjects: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Subject",
+        required: function () {
+          return this.role === "student" && this.studentType === "irregular";
+        },
+      },
+    ],
+
+    requestedSubjects: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Subject",
+        required: function () {
+          return this.role === "student" && this.studentType === "irregular";
+        },
+      },
+    ],
+
+    // ---------- Professor-specific ----------
+    profAvail: [
+      {
+        day: String,
+        startTime: String,
+        endTime: String,
+      },
+    ],
+
+    preferredSubjects: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Subject",
+      },
+    ],
   },
   { timestamps: true }
 );
 
-// Pre-save middleware: hash password + auto-approve superadmin
+// Password hashing
 userSchema.pre("save", async function (next) {
   if (this.isModified("password")) {
     const salt = await bcrypt.genSalt(10);
     this.password = await bcrypt.hash(this.password, salt);
   }
 
-  // Ensure superadmin is always approved
   if (this.role === "superadmin") {
     this.isApproved = true;
   }
@@ -44,10 +121,9 @@ userSchema.pre("save", async function (next) {
   next();
 });
 
-// Compare password method
+// Compare password
 userSchema.methods.matchPassword = async function (enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };
 
-const User = mongoose.model("User", userSchema);
-module.exports = User;
+module.exports = mongoose.model("User", userSchema);

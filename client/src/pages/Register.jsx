@@ -2,30 +2,30 @@ import "../styles/register.css";
 
 const Register = () => {
   return (
-    <div>
+    <div className="register-container">
       {/* LEFT PANEL */}
-      <section className="left-side" aria-label="Welcome Panel">
-        <header className="branding">
-          <figure className="logo-container">
+      <section className="register-left" aria-label="Welcome Panel">
+        <header className="register-branding">
+          <figure className="register-logo-container">
             <img
               src="https://scontent.fmnl17-7.fna.fbcdn.net/v/t39.30808-6/313439300_6561901387158129_8127585076437435119_n.jpg?_nc_cat=108&ccb=1-7&_nc_sid=6ee11a&_nc_eui2=AeF-IRJnMGaXlntr5UTOMLmxtVjfDB530sq1WN8MHnfSyoQMJHgjGqZZlUfPVWn6R9NSazipyhQ9rtckYfYJyquH&_nc_ohc=Yq5y6kvA-yoQ7kNvwGOI43-&_nc_oc=Adl0w58UzTZtVLY9YoRKDft0jQmm07hnSn1O4ZcMarAoPcCuk53wdWnFZor9BUVSXL4&_nc_zt=23&_nc_ht=scontent.fmnl17-7.fna&_nc_gid=ZcpDbtluMiJ7oZVMvcxSpA&oh=00_AfLPcHDrnhDFIdLOqVHUv28uthVJaAx93FnfB_eyFVqKkQ&oe=6830D1CA"
               alt="GCST ICT Logo"
-              className="logo"
+              className="register-logo"
             />
           </figure>
-          <h1 className="school-name">GCST - ICT</h1>
+          <h1 className="register-school-name">GCST - ICT</h1>
         </header>
 
-        <article className="welcome-info">
-          <h2 className="welcome-title">
-            WELCOME BACK
+        <article className="register-welcome-info">
+          <h2 className="register-welcome-title">
+            JOIN US AT
             <br />
-            COLLEGE OF
+            GCST COLLEGE OF
             <br />
             INFORMATICS
           </h2>
-          <p className="info-text">
-            To use this app please login with your personal info.
+          <p className="register-info-text">
+            To create an account, please fill in your personal details.
           </p>
         </article>
       </section>

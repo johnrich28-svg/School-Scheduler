@@ -33,21 +33,21 @@ const Login = () => {
   };
 
   return (
-    <div className="login-container">
+    <main className="login-container">
       {/* LEFT PANEL */}
-      <section className="left-side">
-        <div className="branding">
-          <div className="logo-container">
+      <section className="left-side" aria-label="Welcome Panel">
+        <header className="branding">
+          <figure className="logo-container">
             <img
               src="https://scontent.fmnl17-7.fna.fbcdn.net/v/t39.30808-6/313439300_6561901387158129_8127585076437435119_n.jpg?_nc_cat=108&ccb=1-7&_nc_sid=6ee11a&_nc_eui2=AeF-IRJnMGaXlntr5UTOMLmxtVjfDB530sq1WN8MHnfSyoQMJHgjGqZZlUfPVWn6R9NSazipyhQ9rtckYfYJyquH&_nc_ohc=Yq5y6kvA-yoQ7kNvwGOI43-&_nc_oc=Adl0w58UzTZtVLY9YoRKDft0jQmm07hnSn1O4ZcMarAoPcCuk53wdWnFZor9BUVSXL4&_nc_zt=23&_nc_ht=scontent.fmnl17-7.fna&_nc_gid=ZcpDbtluMiJ7oZVMvcxSpA&oh=00_AfLPcHDrnhDFIdLOqVHUv28uthVJaAx93FnfB_eyFVqKkQ&oe=6830D1CA"
-              alt="Logo"
+              alt="GCST ICT Logo"
               className="logo"
             />
-          </div>
+          </figure>
           <h1 className="school-name">GCST - ICT</h1>
-        </div>
+        </header>
 
-        <div className="welcome-info">
+        <article className="welcome-info">
           <h2 className="welcome-title">
             WELCOME BACK
             <br />
@@ -55,29 +55,19 @@ const Login = () => {
             <br />
             INFORMATICS
           </h2>
-
           <p className="info-text">
             To use this app please login with your personal info.
           </p>
-        </div>
+        </article>
       </section>
 
       {/* RIGHT PANEL */}
-      <section className="right-side">
+      <section className="right-side" aria-label="Login Form Panel">
         <form className="login-form" onSubmit={handleSubmit}>
           <h2 className="form-title">GRANBY COLLEGES SCHEDULER</h2>
 
-          {error && (
-            <p
-              style={{
-                color: "red",
-                marginBottom: "1rem",
-                textAlign: "center",
-              }}
-            >
-              {error}
-            </p>
-          )}
+          {error && <p className="form-error">{error}</p>}
+          {success && <p className="form-success">Logged in successfully!</p>}
 
           <div className="form-group">
             <label htmlFor="email">Email</label>
@@ -109,36 +99,28 @@ const Login = () => {
             LOG IN
           </button>
 
-          {success && (
-            <p
-              style={{ color: "green", marginTop: "1rem", textAlign: "center" }}
-            >
-              Logged in successfully!
-            </p>
-          )}
-
           <div className="alternative-login">
             <p>or you can sign up using</p>
             <div className="social-icons">
               {/* Facebook SVG */}
               <svg
                 xmlns="http://www.w3.org/2000/svg"
-                width="32"
-                height="32"
                 viewBox="0 0 24 24"
-                fill="#1877F2"
+                className="social-icon facebook"
                 aria-label="Facebook"
                 role="img"
               >
-                <path d="M22.675 0h-21.35C.59 0 0 .59 0 1.325v21.351C0 23.41.59 24 1.325 24H12.82v-9.294H9.692v-3.622h3.128V8.413c0-3.1 1.894-4.788 4.66-4.788 1.325 0 2.466.099 2.798.143v3.24l-1.918.001c-1.504 0-1.796.715-1.796 1.763v2.312h3.59l-.467 3.622h-3.123V24h6.116c.735 0 1.324-.59 1.324-1.324V1.325C24 .59 23.41 0 22.675 0z" />
+                <path
+                  fill="#1877F2"
+                  d="M22.675 0h-21.35C.59 0 0 .59 0 1.325v21.351C0 23.41.59 24 1.325 24H12.82v-9.294H9.692v-3.622h3.128V8.413c0-3.1 1.894-4.788 4.66-4.788 1.325 0 2.466.099 2.798.143v3.24l-1.918.001c-1.504 0-1.796.715-1.796 1.763v2.312h3.59l-.467 3.622h-3.123V24h6.116c.735 0 1.324-.59 1.324-1.324V1.325C24 .59 23.41 0 22.675 0z"
+                />
               </svg>
 
-              {/* Google "G" SVG */}
+              {/* Google SVG */}
               <svg
                 xmlns="http://www.w3.org/2000/svg"
-                width="32"
-                height="32"
                 viewBox="0 0 48 48"
+                className="social-icon google"
                 aria-label="Google"
                 role="img"
               >
@@ -165,13 +147,14 @@ const Login = () => {
 
           <hr />
 
-          <div className="signup-redirect">
-            <p>Not registered?</p>
-            <a href="register">Create an account</a>
-          </div>
+          <nav className="signup-redirect">
+            <p>
+              Not registered?<a href="register">Create an account</a>
+            </p>
+          </nav>
         </form>
       </section>
-    </div>
+    </main>
   );
 };
 

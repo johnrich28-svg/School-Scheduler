@@ -31,7 +31,6 @@ body {
   display: flex;
   flex-direction: row; /* Horizontal alignment */
   align-items: center; /* Vertically center items */
-  gap: -1rem; /* Small space between logo and name */
   margin-bottom: 2rem;
 }
 

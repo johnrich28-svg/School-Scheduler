@@ -167,7 +167,7 @@ const Login = () => {
 
           <div className="signup-redirect">
             <p>Not registered?</p>
-            <a href="#">Create an account</a>
+            <a href="register">Create an account</a>
           </div>
         </form>
       </section>

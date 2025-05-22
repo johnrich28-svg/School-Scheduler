@@ -1,0 +1,109 @@
+/* RIGHT SIDE - 70% width, subtle off-white background */
+.right-side {
+  flex: 0 0 70%;
+  background-color: #f9fafb; /* subtle off-white */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 3rem 4rem;
+  box-sizing: border-box;
+  height: 100vh;
+  overflow-y: auto;
+  box-shadow: -5px 0 15px rgba(3, 4, 94, 0.1);
+}
+
+/* Register form styling */
+.register-form {
+  width: 100%;
+  max-width: 450px;
+  padding: 2.5rem 3rem;
+  border-radius: 12px;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  /* Removed white background and shadow */
+}
+
+/* Form title */
+.form-title {
+  margin-bottom: 2rem;
+  font-size: 2.25rem;
+  font-weight: 700;
+  color: #03045e;
+  text-align: center;
+  letter-spacing: 1px;
+}
+
+/* Form groups */
+.form-group {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 1.5rem;
+}
+
+/* Labels */
+.form-group label {
+  margin-bottom: 0.6rem;
+  font-weight: 600;
+  color: #03045e;
+  font-size: 1rem;
+}
+
+/* Inputs and Selects */
+.form-group input,
+.form-group select {
+  padding: 0.65rem 0.8rem;
+  font-size: 1rem;
+  border: 2px solid #ccc;
+  border-radius: 8px;
+  transition: border-color 0.3s ease;
+  font-weight: 500;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+  border-color: #0077cc;
+  outline: none;
+  box-shadow: 0 0 5px #0077cc;
+}
+
+/* Submit button */
+.submit-btn {
+  width: 100%;
+  padding: 0.85rem 0;
+  background-color: #0077cc;
+  border: none;
+  border-radius: 8px;
+  color: white;
+  font-size: 1.1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  letter-spacing: 0.8px;
+}
+
+.submit-btn:hover {
+  background-color: #005fa3;
+}
+
+/* Responsive tweak for smaller screens */
+@media (max-width: 768px) {
+  .login-container {
+    flex-direction: column;
+  }
+
+  .left-side,
+  .right-side {
+    flex: 1 0 auto;
+    width: 100%;
+    height: auto;
+  }
+
+  .right-side {
+    padding: 2rem 1.5rem;
+  }
+
+  .register-form {
+    max-width: 100%;
+    padding: 2rem 1.5rem;
+    border-radius: 0;
+  }
+}

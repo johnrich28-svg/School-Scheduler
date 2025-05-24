@@ -39,7 +39,7 @@ const Login = () => {
         <header className="branding">
           <figure className="logo-container">
             <img
-              src="https://scontent.fmnl17-7.fna.fbcdn.net/v/t39.30808-6/313439300_6561901387158129_8127585076437435119_n.jpg?_nc_cat=108&ccb=1-7&_nc_sid=6ee11a&_nc_eui2=AeF-IRJnMGaXlntr5UTOMLmxtVjfDB530sq1WN8MHnfSyoQMJHgjGqZZlUfPVWn6R9NSazipyhQ9rtckYfYJyquH&_nc_ohc=Yq5y6kvA-yoQ7kNvwGOI43-&_nc_oc=Adl0w58UzTZtVLY9YoRKDft0jQmm07hnSn1O4ZcMarAoPcCuk53wdWnFZor9BUVSXL4&_nc_zt=23&_nc_ht=scontent.fmnl17-7.fna&_nc_gid=ZcpDbtluMiJ7oZVMvcxSpA&oh=00_AfLPcHDrnhDFIdLOqVHUv28uthVJaAx93FnfB_eyFVqKkQ&oe=6830D1CA"
+              src="https://scontent.fmnl4-7.fna.fbcdn.net/v/t39.30808-6/313439300_6561901387158129_8127585076437435119_n.jpg?_nc_cat=108&ccb=1-7&_nc_sid=6ee11a&_nc_eui2=AeF-IRJnMGaXlntr5UTOMLmxtVjfDB530sq1WN8MHnfSyoQMJHgjGqZZlUfPVWn6R9NSazipyhQ9rtckYfYJyquH&_nc_ohc=UtYW2OYSeEoQ7kNvwEd4VHJ&_nc_oc=Adn6KFtuwARR4viS-kphMjwbOzmM80OP6qSkFLRuT41oxjH6e5JQyqDV326HWokMVZKYG9E1lYLeYf2VwtSNpW39&_nc_zt=23&_nc_ht=scontent.fmnl4-7.fna&_nc_gid=EtQ2T5XA-Wd2CjKhArnhMA&oh=00_AfKUo2L-vNoM2KxPSRxBY9Z4REKlGyKqIfrMWuR80eIfrw&oe=6837694A"
               alt="GCST ICT Logo"
               className="logo"
             />

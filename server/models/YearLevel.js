@@ -9,5 +9,5 @@ const yearSchema = new mongoose.Schema({
   },
 });
 
-const Year = mongoose.model("Year", yearSchema);
+const Year = mongoose.model("YearLevel", yearSchema);
 module.exports = Year;

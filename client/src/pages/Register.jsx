@@ -1,6 +1,32 @@
+import { useEffect, useState } from "react";
+import axios from "axios";
 import "../styles/register.css";
 
 const Register = () => {
+  const [courses, setCourses] = useState([]);
+  const [sections, setSections] = useState([]);
+  const [yearLevels, setYearLevels] = useState([]);
+
+  useEffect(() => {
+    const fetchAll = async () => {
+      try {
+        const [courseRes, sectionRes, yearRes] = await Promise.all([
+          axios.get("http://localhost:5000/api/public/courses/get-courses"),
+          axios.get("http://localhost:5000/api/public/sections/get-sections"),
+          axios.get("http://localhost:5000/api/public/sections/get-year"),
+        ]);
+
+        setCourses(courseRes.data);
+        setSections(sectionRes.data);
+        setYearLevels(yearRes.data);
+      } catch (err) {
+        console.error("Error fetching form data:", err);
+      }
+    };
+
+    fetchAll();
+  }, []);
+
   return (
     <div className="register-container">
       {/* LEFT PANEL */}
@@ -8,7 +34,7 @@ const Register = () => {
         <header className="register-branding">
           <figure className="register-logo-container">
             <img
-              src="https://scontent.fmnl17-7.fna.fbcdn.net/v/t39.30808-6/313439300_6561901387158129_8127585076437435119_n.jpg?_nc_cat=108&ccb=1-7&_nc_sid=6ee11a&_nc_eui2=AeF-IRJnMGaXlntr5UTOMLmxtVjfDB530sq1WN8MHnfSyoQMJHgjGqZZlUfPVWn6R9NSazipyhQ9rtckYfYJyquH&_nc_ohc=Yq5y6kvA-yoQ7kNvwGOI43-&_nc_oc=Adl0w58UzTZtVLY9YoRKDft0jQmm07hnSn1O4ZcMarAoPcCuk53wdWnFZor9BUVSXL4&_nc_zt=23&_nc_ht=scontent.fmnl17-7.fna&_nc_gid=ZcpDbtluMiJ7oZVMvcxSpA&oh=00_AfLPcHDrnhDFIdLOqVHUv28uthVJaAx93FnfB_eyFVqKkQ&oe=6830D1CA"
+              src="https://scontent.fmnl17-7.fna.fbcdn.net/..."
               alt="GCST ICT Logo"
               className="register-logo"
             />
@@ -34,36 +60,59 @@ const Register = () => {
       <section className="right-panel">
         <h1>GRANBY COLLEGES SCHEDULER</h1>
         <form className="register-form">
-          <label for="fname">Username</label>
-          <br />
-          <input type="text" id="uname" name="uname"></input>
-          <br />
-          <label for="email">Email</label>
-          <br />
-          <input type="text" id="email" name="email"></input>
-          <br />
-          <label for="pword">Password</label>
-          <br />
-          <input type="text" id="pword" name="pword"></input>
-          <br />
-          <label for="role">Role</label>
-          <br />
+          <label htmlFor="uname">Username</label>
+          <input type="text" id="uname" name="uname" />
+
+          <label htmlFor="email">Email</label>
+          <input type="text" id="email" name="email" />
+
+          <label htmlFor="pword">Password</label>
+          <input type="password" id="pword" name="pword" />
+
+          <label htmlFor="role">Role</label>
           <select id="role" name="role">
             <option value="">-- Select Role --</option>
             <option value="admin">Admin</option>
             <option value="student">Student</option>
             <option value="professor">Professor</option>
           </select>
-          <br />
-          <label for="role">Semester</label>
-          <br />
 
+          <label htmlFor="semester">Semester</label>
           <select id="semester" name="semester">
-            <option id="first-sem">1st</option>
-            <option id="second-sem">2nd</option>
+            <option value="">-- Select Semester --</option>
+            <option value="1st">1st</option>
+            <option value="2nd">2nd</option>
           </select>
 
-          <br />
+          <label htmlFor="course">Course</label>
+          <select id="course" name="course">
+            <option value="">-- Select Course --</option>
+            {courses.map((course) => (
+              <option key={course._id} value={course.course}>
+                {course.course}
+              </option>
+            ))}
+          </select>
+
+          <label htmlFor="yearLevel">Year Level</label>
+          <select id="yearLevel" name="yearLevel">
+            <option value="">-- Select Year Level --</option>
+            {yearLevels.map((year, idx) => (
+              <option key={idx} value={year.name}>
+                {year.name}
+              </option>
+            ))}
+          </select>
+
+          <label htmlFor="section">Section</label>
+          <select id="section" name="section">
+            <option value="">-- Select Section --</option>
+            {sections.map((section) => (
+              <option key={section._id} value={section.name}>
+                {section.name}
+              </option>
+            ))}
+          </select>
         </form>
       </section>
     </div>

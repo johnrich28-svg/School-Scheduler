@@ -36,4 +36,5 @@ module.exports = (app) => {
   app.use("/api/public/courses", require("./access/public"));
   app.use("/api/public/sections", require("./access/public"));
   app.use("/api/public/year-level", require("./access/public"));
+  app.use("/api/public/subjects", require("./access/public"));
 };

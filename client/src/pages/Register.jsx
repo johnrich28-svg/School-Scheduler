@@ -29,6 +29,34 @@ const Register = () => {
           </p>
         </article>
       </section>
+
+      {/* RIGHT PANEL */}
+      <section className="right-panel">
+        <h1>GRANBY COLLEGES SCHEDULER</h1>
+        <form className="register-form">
+          <label for="fname">Username</label>
+          <br />
+          <input type="text" id="uname" name="uname"></input>
+          <br />
+          <label for="email">Email</label>
+          <br />
+          <input type="text" id="email" name="email"></input>
+          <br />
+          <label for="pword">Password</label>
+          <br />
+          <input type="text" id="pword" name="pword"></input>
+          <br />
+          <label for="role">Role</label>
+          <br />
+          <select id="role" name="role">
+            <option value="">-- Select Role --</option>
+            <option value="admin">Admin</option>
+            <option value="student">Student</option>
+            <option value="professor">Professor</option>
+          </select>
+          <br />
+        </form>
+      </section>
     </div>
   );
 };

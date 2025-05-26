@@ -55,6 +55,15 @@ const Register = () => {
             <option value="professor">Professor</option>
           </select>
           <br />
+          <label for="role">Semester</label>
+          <br />
+
+          <select id="semester" name="semester">
+            <option id="first-sem">1st</option>
+            <option id="second-sem">2nd</option>
+          </select>
+
+          <br />
         </form>
       </section>
     </div>

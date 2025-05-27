@@ -139,14 +139,6 @@ const Login = () => {
             LOG IN
           </button>
 
-          <div className="alternative-login">
-            <p>or you can sign up using</p>
-            <div className="social-icons">
-              {/* Facebook and Google SVG icons here */}
-              {/* ... */}
-            </div>
-          </div>
-
           <hr />
 
           <nav className="signup-redirect">

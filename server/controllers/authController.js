@@ -5,9 +5,18 @@ const Subject = require("../models/Subjects");
 const User = require("../models/Users");
 const jwt = require("jsonwebtoken");
 
-// JWT Token Generator
-const generateToken = (id) =>
-  jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: "30d" });
+// JWT Token Generator — includes id, role, email, username
+const generateToken = (user) =>
+  jwt.sign(
+    {
+      id: user._id,
+      role: user.role,
+      email: user.email,
+      username: user.username,
+    },
+    process.env.JWT_SECRET,
+    { expiresIn: "30d" }
+  );
 
 /**
  * Register User - Admin, Student, or Professor (Pending Approval)
@@ -153,7 +162,6 @@ const loginUser = async (req, res) => {
 
     // Populate specific fields based on role
     if (user.role === "student") {
-      // Regular and Irregular students will have different data
       if (user.studentType === "regular") {
         user = await user.populate([
           { path: "courseId", select: "courseName courseCode" },
@@ -166,14 +174,13 @@ const loginUser = async (req, res) => {
         ]);
       }
     } else if (user.role === "professor") {
-      // Populate professor-specific data
       user = await user.populate([
         { path: "preferredSubjects", select: "subjectName subjectCode" },
       ]);
     }
 
-    // Generate JWT token
-    const token = generateToken(user._id);
+    // Generate JWT token including role and other user info
+    const token = generateToken(user);
 
     // Construct the user data to send in response
     const userData = {
@@ -181,10 +188,9 @@ const loginUser = async (req, res) => {
       username: user.username,
       email: user.email,
       role: user.role,
-      token: `Bearer ${token}`,
+      // role-specific data
     };
 
-    // Add role-specific data
     if (user.role === "student") {
       userData.courseId = user.courseId;
       userData.sectionId = user.sectionId;
@@ -193,11 +199,12 @@ const loginUser = async (req, res) => {
         userData.requestedSubjects = user.requestedSubjects;
       }
     } else if (user.role === "professor") {
-      userData.profAvail = user.profAvail;
       userData.preferredSubjects = user.preferredSubjects;
+      userData.profAvail = user.profAvail; // If you use this field
     }
 
-    res.status(200).json(userData);
+    // Send token as raw string, no "Bearer " prefix
+    res.status(200).json({ ...userData, token });
   } catch (error) {
     res.status(500).json({ message: "Server error", error: error.message });
   }

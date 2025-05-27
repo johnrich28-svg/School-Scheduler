@@ -6,7 +6,7 @@ import {
 } from "react-router-dom";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
-import SuperAdmin from "./pages/SuperAdmin"; // Your SuperAdmin component
+import SuperAdminDashboard from "./pages/SuperAdmin";
 
 // Helper to get current user role from JWT
 const getUserRole = () => {
@@ -21,11 +21,11 @@ const getUserRole = () => {
   }
 };
 
-// ProtectedRoute component for superadmin role only
-const ProtectedRoute = ({ element: Element }) => {
+// ProtectedRoute component for superadmin only
+const ProtectedRoute = ({ children }) => {
   const userRole = getUserRole();
   return userRole === "superadmin" ? (
-    <Element />
+    children
   ) : (
     <Navigate to="/login" replace />
   );
@@ -42,10 +42,14 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
 
-        {/* SuperAdmin only route */}
+        {/* SuperAdmin protected route */}
         <Route
           path="/superadmin"
-          element={<ProtectedRoute element={SuperAdmin} />}
+          element={
+            <ProtectedRoute>
+              <SuperAdminDashboard />
+            </ProtectedRoute>
+          }
         />
       </Routes>
     </Router>

@@ -1,61 +1,143 @@
-/* superadmin.css */
+.superadmin-dashboard {
+  background-color: #f5faff;
+  min-height: 100vh;
+  padding: 20px;
+  overflow-y: auto;
+
+  /* Scrollbar styles for Firefox */
+  scrollbar-width: thin;
+  scrollbar-color: #023e8a #f5faff;
+
+  /* Prevent horizontal overflow */
+  overflow-x: hidden;
+}
+
+.superadmin-dashboard::-webkit-scrollbar {
+  width: 10px;
+}
+
+.superadmin-dashboard::-webkit-scrollbar-track {
+  background: #f5faff;
+  border-radius: 10px;
+}
+
+.superadmin-dashboard::-webkit-scrollbar-thumb {
+  background-color: #023e8a;
+  border-radius: 10px;
+  border: 2px solid #f5faff;
+}
 
 .superadmin-container {
-  display: flex;
-  height: 100vh;
-  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-}
+  max-width: 1000px;
+  margin: auto;
+  background-color: white;
+  padding: 30px;
+  border-radius: 10px;
+  box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
 
-.sidebar {
-  width: 250px;
-  background-color: #1e2a38;
-  color: white;
-  display: flex;
-  flex-direction: column;
-  padding: 20px;
-}
-
-.sidebar h2 {
-  font-size: 1.5rem;
-  margin-bottom: 2rem;
-  color: #4fc3f7;
-}
-
-.sidebar a {
-  color: #ffffff;
-  text-decoration: none;
-  margin: 12px 0;
-  padding: 10px;
-  border-radius: 8px;
-  transition: background-color 0.3s;
-}
-
-.sidebar a:hover {
-  background-color: #2f4054;
-}
-
-.header {
-  background-color: #f4f7fa;
-  padding: 20px;
-  border-bottom: 1px solid #ccc;
-}
-
-.main-content {
-  flex: 1;
-  background-color: #f9fbfc;
-  padding: 20px;
+  /* Make container scrollable vertically if too tall */
+  max-height: 90vh;
   overflow-y: auto;
 }
 
-.card {
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
-  padding: 20px;
-  margin-bottom: 20px;
+.superadmin-title {
+  text-align: center;
+  color: #03045e;
+  margin-bottom: 30px;
 }
 
-.card h3 {
-  margin-top: 0;
-  color: #333;
+.superadmin-section {
+  margin-bottom: 40px;
+}
+
+.superadmin-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.superadmin-form input {
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  flex: 1 1 200px; /* Grow and shrink with a min width */
+  min-width: 200px;
+  box-sizing: border-box;
+}
+
+.superadmin-form button {
+  padding: 10px 20px;
+  background-color: #03045e;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  font-weight: bold;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.superadmin-form button:hover {
+  background-color: #023e8a;
+}
+
+.superadmin-delete-button {
+  background-color: #e63946;
+  color: white;
+  margin-left: 10px;
+  padding: 6px 12px;
+  border-radius: 5px;
+  font-size: 14px;
+}
+
+.superadmin-delete-button:hover {
+  background-color: #b21f2d;
+}
+
+.superadmin-table-container {
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+.superadmin-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: auto;
+  word-break: break-word;
+}
+
+.superadmin-table th,
+.superadmin-table td {
+  padding: 10px;
+  text-align: left;
+  border: 1px solid #ddd;
+  white-space: nowrap; /* Keep columns tidy */
+}
+
+.superadmin-editing {
+  margin-top: 10px;
+  font-size: 14px;
+  color: #555;
+}
+
+/* Responsive tweaks */
+@media (max-width: 600px) {
+  .superadmin-form {
+    flex-direction: column;
+  }
+
+  .superadmin-form input,
+  .superadmin-form button {
+    width: 100%;
+    flex: none;
+  }
+
+  .superadmin-delete-button {
+    margin-left: 0;
+    margin-top: 5px;
+  }
+
+  .superadmin-table th,
+  .superadmin-table td {
+    white-space: normal;
+  }
 }

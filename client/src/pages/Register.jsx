@@ -113,6 +113,13 @@ const Register = () => {
               </option>
             ))}
           </select>
+
+          <label htmlFor="student-type">Student Type</label>
+          <select id="student-type" name="studentType">
+            <option value="">-- Select Type --</option>
+            <option value="regular">Regular</option>
+            <option value="irregular">Irregular</option>
+          </select>
         </form>
       </section>
     </div>

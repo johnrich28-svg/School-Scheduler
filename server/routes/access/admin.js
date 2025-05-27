@@ -35,6 +35,7 @@ const {
   getRooms,
   deleteRooms,
 } = require("../../controllers/adminRoomController");
+const { autoGenerateSchedules } = require("../../controllers/adminScheduler");
 
 // Admin Approve User
 router.put("/approve-user/:id", protect, isAdmin, approveUser);
@@ -71,5 +72,8 @@ router.get("/search-subject/:search", protect, isAdmin, searchSubjects);
 router.post("/create-room", protect, isAdmin, createRooms);
 router.post("/get-room", protect, isAdmin, getRooms);
 router.delete("/delete-room/:id", protect, isAdmin, deleteRooms);
+
+//Admin Schedule Generation
+router.post("/create-schedule", protect, isAdmin, autoGenerateSchedules);
 
 module.exports = router;

@@ -3,6 +3,8 @@ const Sections = require("../../models/Sections");
 const YearLevel = require("../../models/YearLevel");
 const Subject = require("../../models/Subjects");
 
+const mongoose = require("mongoose");
+
 // ✅ Get all courses (e.g., BSIT, BSCS)
 const getCourses = async (req, res) => {
   try {
@@ -17,10 +19,13 @@ const getCourses = async (req, res) => {
 // ✅ Get all year levels (e.g., 1st Year, 2nd Year...)
 const getYearLevels = async (req, res) => {
   try {
-    const years = await YearLevel.find({}, "name -_id").sort({ name: 1 });
-    res.status(200).json(years); // [{ name: "1st" }, { name: "2nd" }, ...]
+    const years = await YearLevel.find({}, { name: 1, _id: 0 }).sort({
+      name: 1,
+    });
+    console.log("Fetched years:", years);
+    res.status(200).json(years); // → [{ name: "1st" }, { name: "2nd" }, ...]
   } catch (error) {
-    console.error("Error fetching year levels:", error);
+    console.error("Error fetching year levels:", error.message);
     res
       .status(500)
       .json({ message: "Server error while fetching year levels." });

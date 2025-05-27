@@ -5,9 +5,11 @@ const yearSchema = new mongoose.Schema({
     type: String,
     required: true,
     enum: ["1st", "2nd", "3rd", "4th"],
-    unique: true, // so you don't create duplicate years
+    unique: true,
   },
 });
 
-const Year = mongoose.model("YearLevel", yearSchema);
-module.exports = Year;
+// ✅ Explicitly use the "years" collection (not default "yearlevels")
+const YearLevel = mongoose.model("YearLevel", yearSchema, "years");
+
+module.exports = YearLevel;

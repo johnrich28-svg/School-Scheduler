@@ -6,6 +6,7 @@ const Register = () => {
   const [courses, setCourses] = useState([]);
   const [sections, setSections] = useState([]);
   const [yearLevels, setYearLevels] = useState([]);
+  const [subjects, setSubjects] = useState([]);
 
   useEffect(() => {
     const fetchAll = async () => {
@@ -13,7 +14,7 @@ const Register = () => {
         const [courseRes, sectionRes, yearRes] = await Promise.all([
           axios.get("http://localhost:5000/api/public/courses/get-courses"),
           axios.get("http://localhost:5000/api/public/sections/get-sections"),
-          axios.get("http://localhost:5000/api/public/sections/get-year"),
+          axios.get("http://localhost:5000/api/public/year-level/get-year"),
         ]);
 
         setCourses(courseRes.data);
@@ -25,6 +26,22 @@ const Register = () => {
     };
 
     fetchAll();
+  }, []);
+
+  // Fetch subjects separately
+  useEffect(() => {
+    const fetchSubjects = async () => {
+      try {
+        const res = await axios.get(
+          "http://localhost:5000/api/public/subjects/get-subjects"
+        );
+        setSubjects(res.data);
+      } catch (err) {
+        console.error("Error fetching subjects:", err);
+      }
+    };
+
+    fetchSubjects();
   }, []);
 
   return (
@@ -119,6 +136,16 @@ const Register = () => {
             <option value="">-- Select Type --</option>
             <option value="regular">Regular</option>
             <option value="irregular">Irregular</option>
+          </select>
+
+          <label htmlFor="preferred-subjects">Preferred Subjects</label>
+          <select id="preferred-subjects" name="preferredSubjects">
+            <option value="">-- Select Subject --</option>
+            {subjects.map((subject) => (
+              <option key={subject._id} value={subject.subjectName}>
+                {subject.subjectName}
+              </option>
+            ))}
           </select>
         </form>
       </section>

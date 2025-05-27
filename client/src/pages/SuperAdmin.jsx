@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import "../styles/superadmin.css";
 
 const SuperAdminDashboard = () => {
   const [admins, setAdmins] = useState([]);

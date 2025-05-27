@@ -1,49 +1,134 @@
-/* Reset and full height/width */
+/* Reset and Base */
 html,
 body {
   height: 100%;
   margin: 0;
-  font-family: Arial, sans-serif;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #f4f4f4;
+  overflow: hidden; /* prevent whole page scrolling */
 }
 
-/* Container takes full viewport size, flex layout */
+/* Full viewport flex container */
 .register-container {
   display: flex;
-  height: 100vh;
-  width: 100vw;
-  overflow: hidden;
+  height: 100vh; /* full viewport height */
+  width: 100vw; /* full viewport width */
+  overflow: hidden; /* no scrolling on container */
 }
 
-/* LEFT SIDE - 30% width, blue background */
+/* LEFT PANEL - fixed width */
 .register-left {
-  flex: 0 0 30%;
-  background-color: #03045e; /* Different blue */
+  flex: 0 0 28%; /* fixed width panel */
+  min-width: 280px; /* ensure visible on small screens */
+  background-color: #03045e;
   color: white;
   display: flex;
   flex-direction: column;
-  padding: 2rem;
+  padding: 2rem 1.5rem;
   box-sizing: border-box;
-  height: 100vh;
+  overflow: hidden; /* no internal scroll */
 }
 
-/* Branding: logo and school name */
+/* RIGHT PANEL - fill remaining width */
+.right-panel {
+  flex: 1 1 auto;
+  background-color: #fff;
+  padding: 2rem 3rem;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  overflow-y: auto; /* scroll only if needed */
+  min-width: 300px;
+  max-height: 100vh;
+}
+
+/* Right panel header */
+.right-panel h1 {
+  text-align: center;
+  font-size: 2rem;
+  color: #03045e;
+  margin-bottom: 2rem;
+}
+
+/* Form styles - Horizontal layout */
+.register-form {
+  max-width: 700px; /* wider max width to fit horizontally */
+  width: 100%;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem 2rem; /* vertical and horizontal gaps */
+  align-items: flex-start;
+}
+
+/* For labels and inputs stacked inside each grid item */
+.register-form > div {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Label styling */
+.register-form label {
+  font-weight: 600;
+  margin-bottom: 0.4rem;
+  color: #333;
+  font-size: 1rem;
+}
+
+/* Input and select fields */
+.register-form input,
+.register-form select {
+  padding: 0.6rem 0.8rem;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  font-size: 1rem;
+  background-color: #f9f9f9;
+  transition: border 0.2s ease-in-out, background-color 0.2s ease-in-out;
+}
+
+.register-form input:focus,
+.register-form select:focus {
+  border-color: #0077b6;
+  outline: none;
+  background-color: #fff;
+}
+
+/* Submit button spans full width below fields */
+.register-form button {
+  grid-column: 1 / -1; /* span all columns */
+  padding: 0.7rem 1rem;
+  background-color: #03045e;
+  color: white;
+  font-size: 1rem;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background 0.2s ease-in-out;
+  margin-top: 1rem;
+}
+
+.register-form button:hover {
+  background-color: #023e8a;
+}
+
+/* Branding & welcome on left */
 .register-branding {
   display: flex;
-  flex-direction: row; /* Horizontal alignment */
-  align-items: center; /* Vertically center items */
+  align-items: center;
   margin-bottom: 2rem;
 }
 
 .register-logo-container {
   width: 60px;
   height: 60px;
-  background-color: white;
+  background: white;
   border-radius: 50%;
   display: flex;
   justify-content: center;
   align-items: center;
   overflow: hidden;
-  flex-shrink: 0;
+  margin-right: 1rem;
 }
 
 .register-logo {
@@ -53,13 +138,11 @@ body {
 }
 
 .register-school-name {
-  color: white;
   font-size: 1.8rem;
   font-weight: bold;
   margin: 0;
 }
 
-/* Welcome info section */
 .register-welcome-info {
   flex-grow: 1;
   display: flex;
@@ -67,6 +150,7 @@ body {
   justify-content: center;
   text-align: center;
   margin-top: -5rem;
+  padding: 0 1rem;
 }
 
 .register-welcome-title {
@@ -81,4 +165,78 @@ body {
   max-width: 250px;
   line-height: 1.4;
   margin: 0 auto;
+}
+
+/* Responsive adjustments for smaller widths */
+@media (max-width: 900px) {
+  .register-form {
+    max-width: 100%;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.8rem 1rem;
+  }
+}
+
+@media (max-width: 600px) {
+  .register-container {
+    flex-direction: column;
+  }
+
+  .register-left {
+    flex: none;
+    width: 100%;
+    min-width: auto;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .right-panel {
+    flex: none;
+    width: 100%;
+    min-width: auto;
+    padding: 2rem 1.5rem;
+    overflow-y: auto;
+  }
+
+  .register-form {
+    grid-template-columns: 1fr; /* single column on narrow screens */
+  }
+
+  .register-form button {
+    grid-column: 1 / 2;
+  }
+
+  .register-welcome-info {
+    margin-top: 0;
+  }
+}
+
+/* Responsive adjustments for smaller viewport heights */
+@media (max-height: 700px) {
+  .right-panel {
+    padding: 1rem 1.5rem;
+  }
+
+  .register-form {
+    gap: 0.6rem 1rem;
+  }
+
+  .register-form label {
+    font-size: 0.95rem;
+  }
+
+  .register-form input,
+  .register-form select {
+    padding: 0.5rem 0.7rem;
+    font-size: 0.95rem;
+  }
+
+  .register-form button {
+    padding: 0.6rem 0.9rem;
+    font-size: 0.95rem;
+  }
+
+  .right-panel h1 {
+    font-size: 1.6rem;
+    margin-bottom: 1rem;
+  }
 }

@@ -5,6 +5,7 @@ const {
   getAllSections,
   getYearLevels,
   getSubjects,
+  postTimeSlots,
 } = require("../../controllers/public/publicController");
 
 // Route: GET /api/public/courses
@@ -18,5 +19,8 @@ router.get("/get-year", getYearLevels);
 
 // Route: Get /api/public/get-subjects
 router.get("/get-subjects", getSubjects);
+
+// Route: Post /api/public/insert-timeslots
+router.post("/post-timeslots", postTimeSlots);
 
 module.exports = router;

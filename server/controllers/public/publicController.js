@@ -2,6 +2,7 @@ const Courses = require("../../models/Courses");
 const Sections = require("../../models/Sections");
 const YearLevel = require("../../models/YearLevel");
 const Subject = require("../../models/Subjects");
+const TimeSlot = require("../../models/TimeSlot");
 
 const mongoose = require("mongoose");
 
@@ -65,9 +66,69 @@ const getSubjects = async (req, res) => {
   }
 };
 
+// ✅ Create a new time slot
+const postTimeSlots = async (req, res) => {
+  try {
+    const { day, startTime, endTime, sequence } = req.body || {};
+
+    console.log("Received data:", req.body);
+
+    // Validate required fields
+    if (
+      !day ||
+      ![
+        "Monday",
+        "Tuesday",
+        "Wednesday",
+        "Thursday",
+        "Friday",
+        "Saturday",
+      ].includes(day) ||
+      !startTime ||
+      !endTime ||
+      typeof sequence !== "number"
+    ) {
+      return res.status(400).json({
+        message:
+          "Invalid input. Required fields: day (Mon-Sat), startTime, endTime, sequence (number).",
+      });
+    }
+
+    // Optional: Check if sequence for the same day already exists
+    const existing = await TimeSlot.findOne({ day, sequence });
+    if (existing) {
+      return res.status(409).json({
+        message: `TimeSlot with sequence ${sequence} on ${day} already exists.`,
+      });
+    }
+
+    // Create and save new TimeSlot
+    const newTimeSlot = new TimeSlot({
+      day,
+      startTime,
+      endTime,
+      sequence,
+    });
+
+    await newTimeSlot.save();
+
+    return res.status(201).json({
+      message: "TimeSlot created successfully.",
+      data: newTimeSlot,
+    });
+  } catch (error) {
+    console.error("Error creating TimeSlot:", error);
+    return res.status(500).json({
+      message: "Internal server error.",
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   getCourses,
   getYearLevels,
   getAllSections,
   getSubjects,
+  postTimeSlots,
 };

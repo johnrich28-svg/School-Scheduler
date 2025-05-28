@@ -42,7 +42,10 @@ const Admin = () => {
     subjectName: '',
     courseId: '',
     yearLevelId: '',
-    units: 3
+    units: 3,
+    startTime: '',
+    endTime: '',
+    day: ''
   });
   const [subjectErrors, setSubjectErrors] = useState({});
 
@@ -147,6 +150,8 @@ const Admin = () => {
     if (!newSubject.courseId) errors.courseId = 'Course is required';
     if (!newSubject.yearLevelId) errors.yearLevelId = 'Year level is required';
     if (!newSubject.units || newSubject.units < 1) errors.units = 'Units must be at least 1';
+    if (!newSubject.startTime) errors.startTime = 'Start time is required';
+    if (!newSubject.day) errors.day = 'Day is required';
     setSubjectErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -156,6 +161,24 @@ const Admin = () => {
     if (!newRoom.room) errors.room = 'Room name is required';
     setRoomErrors(errors);
     return Object.keys(errors).length === 0;
+  };
+
+  // Add function to calculate end time
+  const calculateEndTime = (startTime) => {
+    if (!startTime) return '';
+    const [hours, minutes] = startTime.split(':').map(Number);
+    let endHours = hours + 3;
+    if (endHours >= 24) {
+      endHours -= 24;
+    }
+    return `${endHours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+  };
+
+  // Add handler for start time change
+  const handleStartTimeChange = (e) => {
+    const startTime = e.target.value;
+    const endTime = calculateEndTime(startTime);
+    setNewSubject({ ...newSubject, startTime, endTime });
   };
 
   // Handle form submissions
@@ -285,7 +308,16 @@ const Admin = () => {
       };
 
       await axios.post(`${API_BASE_URL}/api/admin/subjects/create-subject`, newSubject, { headers });
-      setNewSubject({ subjectCode: '', subjectName: '', courseId: '', yearLevelId: '', units: 3 });
+      setNewSubject({ 
+        subjectCode: '', 
+        subjectName: '', 
+        courseId: '', 
+        yearLevelId: '', 
+        units: 3,
+        startTime: '',
+        endTime: '',
+        day: ''
+      });
       setSuccess('Subject created successfully');
       
       // Refresh subjects list
@@ -646,6 +678,39 @@ const Admin = () => {
                     />
                     {subjectErrors.units && <span className="error-text">{subjectErrors.units}</span>}
                   </div>
+                  <div>
+                    <select
+                      value={newSubject.day}
+                      onChange={(e) => setNewSubject({ ...newSubject, day: e.target.value })}
+                      className={`form-select ${subjectErrors.day ? 'error' : ''}`}
+                    >
+                      <option value="">Select Day</option>
+                      <option value="Monday">Monday</option>
+                      <option value="Tuesday">Tuesday</option>
+                      <option value="Wednesday">Wednesday</option>
+                      <option value="Thursday">Thursday</option>
+                      <option value="Friday">Friday</option>
+                      <option value="Saturday">Saturday</option>
+                    </select>
+                    {subjectErrors.day && <span className="error-text">{subjectErrors.day}</span>}
+                  </div>
+                  <div>
+                    <input
+                      type="time"
+                      value={newSubject.startTime}
+                      onChange={handleStartTimeChange}
+                      className={`form-input ${subjectErrors.startTime ? 'error' : ''}`}
+                    />
+                    {subjectErrors.startTime && <span className="error-text">{subjectErrors.startTime}</span>}
+                  </div>
+                  <div>
+                    <input
+                      type="time"
+                      value={newSubject.endTime}
+                      disabled
+                      className="form-input"
+                    />
+                  </div>
                 </div>
                 <button type="submit" className="submit-button" disabled={loading}>
                   Add Subject
@@ -664,6 +729,7 @@ const Admin = () => {
                         Year Level: {years.find(y => y._id === subject.yearLevelId)?.name}
                       </p>
                       <p className="data-subtitle">Units: {subject.units}</p>
+                      <p className="data-subtitle">Schedule: {subject.day} {subject.startTime} - {subject.endTime}</p>
                     </div>
                   ))
                 ) : (

@@ -9,7 +9,7 @@ const Register = () => {
   const [courses, setCourses] = useState([]);
   const [sections, setSections] = useState([]);
   const [yearLevels, setYearLevels] = useState([]);
-  const [subjects, setSubjects] = useState([]);
+  const [professorSections, setProfessorSections] = useState([]); // New state for professor sections
 
   const [selectedRole, setSelectedRole] = useState("");
   const [formData, setFormData] = useState({
@@ -22,13 +22,13 @@ const Register = () => {
     yearLevel: "",
     sectionId: "",
     studentType: "",
-    preferredSubjects: [], // array of subject IDs
+    preferredSections: [], // Changed from preferredSubjects to preferredSections
   });
 
-  // For the single subject selected before clicking "+"
-  const [selectedPreferredSubject, setSelectedPreferredSubject] = useState("");
+  // For the single section selected before clicking "+"
+  const [selectedPreferredSection, setSelectedPreferredSection] = useState("");
 
-  // Fetch courses, sections, year levels on mount
+  // Fetch courses, student sections, year levels on mount
   useEffect(() => {
     const fetchAll = async () => {
       try {
@@ -47,61 +47,56 @@ const Register = () => {
     fetchAll();
   }, []);
 
-  // Fetch subjects for professors
+  // Fetch sections for professors
   useEffect(() => {
-    const fetchSubjects = async () => {
+    const fetchProfessorSections = async () => {
       try {
         const res = await axios.get(
-          "http://localhost:5000/api/public/subjects/get-subjects"
+          "http://localhost:5000/api/public/sections/get-sections"
         );
-        setSubjects(res.data);
+        setProfessorSections(res.data);
       } catch (err) {
-        console.error("Error fetching subjects:", err);
+        console.error("Error fetching professor sections:", err);
       }
     };
-    fetchSubjects();
+    fetchProfessorSections();
   }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     if (name === "role") {
       setSelectedRole(value);
-      // Reset preferredSubjects and selectedPreferredSubject if role changes
+      // Reset preferredSections and selectedPreferredSection if role changes
       if (value !== "professor") {
         setFormData((prev) => ({
           ...prev,
-          preferredSubjects: [],
+          preferredSections: [],
         }));
-        setSelectedPreferredSubject("");
+        setSelectedPreferredSection("");
       }
     }
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  // Add selected subject from dropdown to preferredSubjects list
-  const addPreferredSubject = () => {
+  // Add selected section from dropdown to preferredSections list
+  const addPreferredSection = () => {
     if (
-      selectedPreferredSubject &&
-      !formData.preferredSubjects.includes(selectedPreferredSubject)
+      selectedPreferredSection &&
+      !formData.preferredSections.includes(selectedPreferredSection)
     ) {
       setFormData((prev) => ({
         ...prev,
-        preferredSubjects: [
-          ...prev.preferredSubjects,
-          selectedPreferredSubject,
-        ],
+        preferredSections: [...prev.preferredSections, selectedPreferredSection],
       }));
-      setSelectedPreferredSubject(""); // clear selection
+      setSelectedPreferredSection(""); // clear selection
     }
   };
 
-  // Remove a subject from preferredSubjects list
-  const removePreferredSubject = (subjectId) => {
+  // Remove a section from preferredSections list
+  const removePreferredSection = (sectionId) => {
     setFormData((prev) => ({
       ...prev,
-      preferredSubjects: prev.preferredSubjects.filter(
-        (id) => id !== subjectId
-      ),
+      preferredSections: prev.preferredSections.filter((id) => id !== sectionId),
     }));
   };
 
@@ -127,7 +122,7 @@ const Register = () => {
     } else if (formData.role === "professor") {
       payload = {
         ...payload,
-        preferredSubjects: formData.preferredSubjects,
+        preferredSections: formData.preferredSections, // Changed from preferredSubjects
       };
     }
 
@@ -300,25 +295,25 @@ const Register = () => {
 
           {selectedRole === "professor" && (
             <>
-              <label>Preferred Subjects</label>
+              <label>Preferred Sections</label>
               <div
                 style={{ display: "flex", alignItems: "center", gap: "8px" }}
               >
                 <select
-                  name="preferredSubjects"
-                  value={selectedPreferredSubject}
-                  onChange={(e) => setSelectedPreferredSubject(e.target.value)}
+                  name="preferredSections"
+                  value={selectedPreferredSection}
+                  onChange={(e) => setSelectedPreferredSection(e.target.value)}
                 >
-                  <option value="">-- Select Subject --</option>
-                  {subjects.map((s) => (
+                  <option value="">-- Select Section --</option>
+                  {professorSections.map((s) => (
                     <option key={s._id} value={s._id}>
-                      {s.subjectName}
+                      {s.name}
                     </option>
                   ))}
                 </select>
                 <button
                   type="button"
-                  onClick={addPreferredSubject}
+                  onClick={addPreferredSection}
                   style={{
                     padding: "4px 12px",
                     fontWeight: "bold",
@@ -326,15 +321,15 @@ const Register = () => {
                     cursor: "pointer",
                     userSelect: "none",
                   }}
-                  aria-label="Add subject"
-                  disabled={!selectedPreferredSubject}
+                  aria-label="Add section"
+                  disabled={!selectedPreferredSection}
                 >
                   +
                 </button>
               </div>
 
-              {/* List of preferred subjects added */}
-              {formData.preferredSubjects.length > 0 && (
+              {/* List of preferred sections added */}
+              {formData.preferredSections.length > 0 && (
                 <ul
                   style={{
                     listStyleType: "none",
@@ -342,11 +337,13 @@ const Register = () => {
                     marginTop: "8px",
                   }}
                 >
-                  {formData.preferredSubjects.map((subjectId) => {
-                    const subject = subjects.find((s) => s._id === subjectId);
+                  {formData.preferredSections.map((sectionId) => {
+                    const section = professorSections.find(
+                      (s) => s._id === sectionId
+                    );
                     return (
                       <li
-                        key={subjectId}
+                        key={sectionId}
                         style={{
                           display: "flex",
                           justifyContent: "space-between",
@@ -357,10 +354,10 @@ const Register = () => {
                           borderRadius: "4px",
                         }}
                       >
-                        <span>{subject ? subject.subjectName : subjectId}</span>
+                        <span>{section ? section.name : sectionId}</span>
                         <button
                           type="button"
-                          onClick={() => removePreferredSubject(subjectId)}
+                          onClick={() => removePreferredSection(sectionId)}
                           style={{
                             color: "red",
                             background: "none",
@@ -369,9 +366,7 @@ const Register = () => {
                             fontWeight: "bold",
                             fontSize: "16px",
                           }}
-                          aria-label={`Remove ${
-                            subject ? subject.subjectName : ""
-                          }`}
+                          aria-label={`Remove ${section ? section.name : ""}`}
                         >
                           &times;
                         </button>

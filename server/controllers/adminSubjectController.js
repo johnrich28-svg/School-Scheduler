@@ -4,9 +4,9 @@ const YearLevel = require("../models/YearLevel");
 const mongoose = require("mongoose");
 // Create a new Subject
 const createSubject = async (req, res) => {
-  const { subjectCode, subjectName, courseId, yearLevelId, units } = req.body;
+  const { subjectCode, subjectName, courseId, yearLevelId, units, day, startTime, endTime } = req.body;
 
-  if (!subjectCode || !subjectName || !courseId || !yearLevelId || !units) {
+  if (!subjectCode || !subjectName || !courseId || !yearLevelId || !units || !day || !startTime || !endTime) {
     return res.status(400).json({ message: "All fields are required" });
   }
 
@@ -41,6 +41,9 @@ const createSubject = async (req, res) => {
       courseId,
       yearLevelId,
       units,
+      day,
+      startTime,
+      endTime
     });
 
     await subject.save();
@@ -54,8 +57,8 @@ const createSubject = async (req, res) => {
 const getSubjects = async (req, res) => {
   try {
     const subjects = await Subject.find()
-      .populate("courseId", "courseName")
-      .populate("yearLevelId", "level"); // Populate courseId and yearLevelId fields
+      .populate("courseId", "course")
+      .populate("yearLevelId", "name");
     res.json(subjects);
   } catch (error) {
     res.status(500).json({ message: "Server error", error: error.message });
@@ -64,7 +67,7 @@ const getSubjects = async (req, res) => {
 
 // Update Subject
 const updateSubject = async (req, res) => {
-  const { subjectCode, subjectName, courseId, yearLevelId, units } = req.body;
+  const { subjectCode, subjectName, courseId, yearLevelId, units, day, startTime, endTime } = req.body;
 
   try {
     const subject = await Subject.findById(req.params.id);
@@ -84,7 +87,7 @@ const updateSubject = async (req, res) => {
 
     // Validate and assign yearLevelId if provided
     if (yearLevelId) {
-      const year = await Year.findById(yearLevelId);
+      const year = await YearLevel.findById(yearLevelId);
       if (!year) {
         return res.status(400).json({ message: "Invalid year level ID" });
       }
@@ -95,6 +98,9 @@ const updateSubject = async (req, res) => {
     if (subjectCode !== undefined) subject.subjectCode = subjectCode;
     if (subjectName !== undefined) subject.subjectName = subjectName;
     if (units !== undefined) subject.units = units;
+    if (day !== undefined) subject.day = day;
+    if (startTime !== undefined) subject.startTime = startTime;
+    if (endTime !== undefined) subject.endTime = endTime;
 
     await subject.save();
     res.json({ message: "Subject updated successfully", subject });
@@ -112,7 +118,6 @@ const deleteSubject = async (req, res) => {
       return res.status(404).json({ message: "Subject not found" });
     }
 
-    // Use deleteOne instead of remove
     await subject.deleteOne();
     res.json({ message: "Subject deleted successfully" });
   } catch (error) {
@@ -143,8 +148,8 @@ const searchSubjects = async (req, res) => {
     }
 
     const subjects = await Subject.find(query)
-      .populate("courseId", "courseName")
-      .populate("yearLevelId", "level");
+      .populate("courseId", "course")
+      .populate("yearLevelId", "name");
 
     if (subjects.length === 0) {
       return res.status(404).json({ message: "No subjects found" });

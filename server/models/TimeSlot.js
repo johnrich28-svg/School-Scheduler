@@ -15,10 +15,6 @@ const TimeSlotSchema = new mongoose.Schema({
     type: String,
     required: true, // Format: '11:00'
   },
-  sequence: {
-    type: Number,
-    required: true,
-  },
 });
 
 module.exports = mongoose.model("TimeSlot", TimeSlotSchema);

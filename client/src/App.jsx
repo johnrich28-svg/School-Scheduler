@@ -7,6 +7,7 @@ import {
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import SuperAdminDashboard from "./pages/SuperAdmin";
+import AdminDashboard from "./pages/Admin";
 
 // Helper to get current user role from JWT
 const getUserRole = () => {
@@ -21,10 +22,10 @@ const getUserRole = () => {
   }
 };
 
-// ProtectedRoute component for superadmin only
-const ProtectedRoute = ({ children }) => {
+// ProtectedRoute component for role-based access
+const ProtectedRoute = ({ allowedRoles, children }) => {
   const userRole = getUserRole();
-  return userRole === "superadmin" ? (
+  return allowedRoles.includes(userRole) ? (
     children
   ) : (
     <Navigate to="/login" replace />
@@ -42,12 +43,22 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
 
-        {/* SuperAdmin protected route */}
+        {/* SuperAdmin protected route (superadmin only) */}
         <Route
           path="/superadmin"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={["superadmin"]}>
               <SuperAdminDashboard />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Admin protected route (admin only) */}
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <AdminDashboard />
             </ProtectedRoute>
           }
         />

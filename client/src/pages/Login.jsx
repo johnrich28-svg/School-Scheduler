@@ -54,16 +54,18 @@ const Login = () => {
       const decoded = decodeToken(token);
       console.log("Decoded token:", decoded);
 
-      if (
-        decoded &&
-        decoded.role &&
-        decoded.role.toLowerCase() === "superadmin"
-      ) {
+      if (decoded && decoded.role) {
         localStorage.setItem("authToken", token);
         setSuccess(true);
-        navigate("/superadmin");
+        if (decoded.role.toLowerCase() === "superadmin") {
+          navigate("/superadmin");
+        } else if (decoded.role.toLowerCase() === "admin") {
+          navigate("/admin");
+        } else {
+          setError("You are not authorized as an Admin or SuperAdmin.");
+        }
       } else {
-        setError("You are not authorized as a SuperAdmin.");
+        setError("Invalid token received.");
       }
     } catch (err) {
       setError(

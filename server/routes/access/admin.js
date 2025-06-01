@@ -30,7 +30,6 @@ const {
   deleteSubject,
   searchSubjects,
 } = require("../../controllers/adminSubjectController");
-const { autoGenerateSchedules } = require("../../controllers/adminScheduler");
 const {
   generateSchedules,
   getSchedules,
@@ -58,7 +57,7 @@ router.get("/search-year/:search", protect, isAdmin, searchYears);
 
 // Admin CRUD for Sections
 router.post("/create-section", protect, isAdmin, createSection);
-router.get("/get-section", protect, isAdmin, getSections);
+router.get("/get-sections", protect, isAdmin, getSections);
 router.put("/update-section/:id", protect, isAdmin, updateSection);
 router.delete("/delete-section/:id", protect, isAdmin, deleteSection);
 router.get("/search-section/:search", protect, isAdmin, searchSections);
@@ -69,9 +68,6 @@ router.get("/get-subject", protect, isAdmin, getSubjects);
 router.put("/update-subject/:id", protect, isAdmin, updateSubject);
 router.delete("/delete-subject/:id", protect, isAdmin, deleteSubject);
 router.get("/search-subject/:search", protect, isAdmin, searchSubjects);
-
-//Admin Schedule Generation
-router.post("/create-schedule", protect, isAdmin, autoGenerateSchedules);
 
 // Schedule routes
 router.post("/generate-schedules", protect, isAdmin, generateSchedules);

@@ -46,6 +46,7 @@ scheduleSchema.index(
   { unique: true }
 );
 
-const Schedule = mongoose.model("Schedule", scheduleSchema);
+// ✅ Prevent model overwrite on hot reload
+const Schedule = mongoose.models.Schedule || mongoose.model("Schedule", scheduleSchema);
 
 module.exports = Schedule;

@@ -120,7 +120,7 @@ const Admin = () => {
           case "sections":
             try {
               const sectionsRes = await axios.get(
-                `${API_BASE_URL}/api/auth/admin/get-section`,
+                `${API_BASE_URL}/api/auth/admin/get-sections`,
                 { headers }
               );
               console.log("Sections response:", sectionsRes.data); // Debug log
@@ -357,7 +357,7 @@ const Admin = () => {
               break;
             case "sections":
               const sectionsRes = await axios.get(
-                `${API_BASE_URL}/api/auth/admin/get-section`,
+                `${API_BASE_URL}/api/auth/admin/get-sections`,
                 { headers }
               );
               setSections(Array.isArray(sectionsRes.data) ? sectionsRes.data : []);
@@ -581,7 +581,7 @@ const Admin = () => {
 
       // Refresh sections list
       const sectionsRes = await axios.get(
-        `${API_BASE_URL}/api/auth/admin/get-section`,
+        `${API_BASE_URL}/api/auth/admin/get-sections`,
         { headers }
       );
       setSections(Array.isArray(sectionsRes.data) ? sectionsRes.data : []);
@@ -731,9 +731,12 @@ const Admin = () => {
         "Content-Type": "application/json",
       };
 
+      // If a section is selected, only generate schedules for that section
+      const requestBody = selectedSection ? { sectionId: selectedSection } : {};
+
       await axios.post(
         `${API_BASE_URL}/api/auth/admin/generate-schedules`,
-        {},
+        requestBody,
         { headers }
       );
 

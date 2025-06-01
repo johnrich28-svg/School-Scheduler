@@ -1,42 +1,28 @@
 const Subject = require("../models/Subjects");
 const Course = require("../models/Courses");
 const YearLevel = require("../models/YearLevel");
-const mongoose = require("mongoose");
 const asyncHandler = require("express-async-handler");
 
-// Create a new Subject
+// Create a new subject
 const createSubject = asyncHandler(async (req, res) => {
-  const { subjectCode, subjectName, courseId, yearLevelId, semester, units, startTime, endTime, day } = req.body;
+  const { subjectCode, subjectName, courseId, yearLevelId, semester, units, day } = req.body;
 
   // Validate required fields
-  if (!subjectCode || !subjectName || !courseId || !yearLevelId || !semester || !units || !startTime || !endTime || !day) {
+  if (!subjectCode || !subjectName || !courseId || !yearLevelId || !semester || !units || !day) {
     res.status(400);
     throw new Error("Please fill in all required fields");
   }
 
-  // Validate semester
-  if (!["1st", "2nd"].includes(semester)) {
-    res.status(400);
-    throw new Error("Invalid semester value");
-  }
-
-  // Check if subject code already exists
-  const subjectExists = await Subject.findOne({ subjectCode });
-  if (subjectExists) {
-    res.status(400);
-    throw new Error("Subject code already exists");
-  }
-
-  // Check if the course exists
-  const course = await Course.findById(courseId);
-  if (!course) {
+  // Check if course exists
+  const courseExists = await Course.findById(courseId);
+  if (!courseExists) {
     res.status(400);
     throw new Error("Course not found");
   }
 
-  // Check if the year level exists
-  const yearLevel = await YearLevel.findById(yearLevelId);
-  if (!yearLevel) {
+  // Check if year level exists
+  const yearExists = await YearLevel.findById(yearLevelId);
+  if (!yearExists) {
     res.status(400);
     throw new Error("Year level not found");
   }
@@ -49,8 +35,6 @@ const createSubject = asyncHandler(async (req, res) => {
     yearLevelId,
     semester,
     units,
-    startTime,
-    endTime,
     day,
   });
 
@@ -62,43 +46,17 @@ const createSubject = asyncHandler(async (req, res) => {
   }
 });
 
-// Get all Subjects
+// Get all subjects
 const getSubjects = asyncHandler(async (req, res) => {
-  const subjects = await Subject.find()
-    .populate({
-      path: 'courseId',
-      select: 'course',
-      model: 'Course'
-    })
-    .populate({
-      path: 'yearLevelId',
-      select: 'name',
-      model: 'YearLevel'
-    });
-  
-  if (!subjects) {
-    res.status(404);
-    throw new Error("No subjects found");
-  }
-  
+  const subjects = await Subject.find({})
+    .populate("courseId", "course")
+    .populate("yearLevelId", "name");
   res.json(subjects);
 });
 
-// Update Subject
+// Update a subject
 const updateSubject = asyncHandler(async (req, res) => {
-  const { subjectCode, subjectName, courseId, yearLevelId, semester, units, startTime, endTime, day } = req.body;
-
-  // Validate required fields
-  if (!subjectCode || !subjectName || !courseId || !yearLevelId || !semester || !units || !startTime || !endTime || !day) {
-    res.status(400);
-    throw new Error("Please fill in all required fields");
-  }
-
-  // Validate semester
-  if (!["1st", "2nd"].includes(semester)) {
-    res.status(400);
-    throw new Error("Invalid semester value");
-  }
+  const { subjectCode, subjectName, courseId, yearLevelId, semester, units, day } = req.body;
 
   const subject = await Subject.findById(req.params.id);
 
@@ -107,82 +65,58 @@ const updateSubject = asyncHandler(async (req, res) => {
     throw new Error("Subject not found");
   }
 
-  // Check if subject code already exists (excluding current subject)
-  const subjectExists = await Subject.findOne({
-    subjectCode,
-    _id: { $ne: req.params.id },
-  });
-
-  if (subjectExists) {
+  // Check if course exists
+  const courseExists = await Course.findById(courseId);
+  if (!courseExists) {
     res.status(400);
-    throw new Error("Subject code already exists");
+    throw new Error("Course not found");
   }
 
-  subject.subjectCode = subjectCode;
-  subject.subjectName = subjectName;
-  subject.courseId = courseId;
-  subject.yearLevelId = yearLevelId;
-  subject.semester = semester;
-  subject.units = units;
-  subject.startTime = startTime;
-  subject.endTime = endTime;
-  subject.day = day;
+  // Check if year level exists
+  const yearExists = await YearLevel.findById(yearLevelId);
+  if (!yearExists) {
+    res.status(400);
+    throw new Error("Year level not found");
+  }
+
+  subject.subjectCode = subjectCode || subject.subjectCode;
+  subject.subjectName = subjectName || subject.subjectName;
+  subject.courseId = courseId || subject.courseId;
+  subject.yearLevelId = yearLevelId || subject.yearLevelId;
+  subject.semester = semester || subject.semester;
+  subject.units = units || subject.units;
+  subject.day = day || subject.day;
 
   const updatedSubject = await subject.save();
   res.json(updatedSubject);
 });
 
-// Delete Subject
-const deleteSubject = async (req, res) => {
-  try {
-    const subject = await Subject.findById(req.params.id);
+// Delete a subject
+const deleteSubject = asyncHandler(async (req, res) => {
+  const subject = await Subject.findById(req.params.id);
 
-    if (!subject) {
-      return res.status(404).json({ message: "Subject not found" });
-    }
-
-    await subject.deleteOne();
-    res.json({ message: "Subject deleted successfully" });
-  } catch (error) {
-    res.status(500).json({ message: "Server error", error: error.message });
+  if (!subject) {
+    res.status(404);
+    throw new Error("Subject not found");
   }
-};
 
-// Search Subjects by subjectCode, subjectName, or _id
-const searchSubjects = async (req, res) => {
-  try {
-    const searchQuery = req.params.search?.trim();
+  await subject.deleteOne();
+  res.json({ message: "Subject removed" });
+});
 
-    if (!searchQuery) {
-      return res.status(400).json({ message: "Search parameter is required." });
-    }
-
-    const isValidObjectId = mongoose.Types.ObjectId.isValid(searchQuery);
-
-    const query = {
-      $or: [
-        { subjectName: { $regex: searchQuery, $options: "i" } },
-        { subjectCode: { $regex: searchQuery, $options: "i" } },
-      ],
-    };
-
-    if (isValidObjectId) {
-      query.$or.push({ _id: searchQuery });
-    }
-
-    const subjects = await Subject.find(query)
-      .populate("courseId", "course")
-      .populate("yearLevelId", "name");
-
-    if (subjects.length === 0) {
-      return res.status(404).json({ message: "No subjects found" });
-    }
-
-    res.json(subjects);
-  } catch (error) {
-    res.status(500).json({ message: "Server error", error: error.message });
-  }
-};
+// Search subjects
+const searchSubjects = asyncHandler(async (req, res) => {
+  const searchQuery = req.params.search;
+  const subjects = await Subject.find({
+    $or: [
+      { subjectCode: { $regex: searchQuery, $options: "i" } },
+      { subjectName: { $regex: searchQuery, $options: "i" } },
+    ],
+  })
+    .populate("courseId", "course")
+    .populate("yearLevelId", "name");
+  res.json(subjects);
+});
 
 module.exports = {
   createSubject,

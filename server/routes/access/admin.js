@@ -31,6 +31,13 @@ const {
   searchSubjects,
 } = require("../../controllers/adminSubjectController");
 const { autoGenerateSchedules } = require("../../controllers/adminScheduler");
+const {
+  generateSchedules,
+  getSchedules,
+  getSchedulesBySection,
+  getSchedulesBySemester,
+  deleteAllSchedules,
+} = require("../../controllers/adminScheduleController");
 
 // Admin Approve User
 router.put("/approve-user/:id", protect, isAdmin, approveUser);
@@ -65,5 +72,12 @@ router.get("/search-subject/:search", protect, isAdmin, searchSubjects);
 
 //Admin Schedule Generation
 router.post("/create-schedule", protect, isAdmin, autoGenerateSchedules);
+
+// Schedule routes
+router.post("/generate-schedules", protect, isAdmin, generateSchedules);
+router.get("/get-schedules", protect, isAdmin, getSchedules);
+router.get("/get-schedules/section/:sectionId", protect, isAdmin, getSchedulesBySection);
+router.get("/get-schedules/semester/:semester", protect, isAdmin, getSchedulesBySemester);
+router.delete("/delete-schedules", protect, isAdmin, deleteAllSchedules);
 
 module.exports = router;

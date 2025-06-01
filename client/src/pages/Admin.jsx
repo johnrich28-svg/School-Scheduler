@@ -16,6 +16,9 @@ const Admin = () => {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
+  const [schedules, setSchedules] = useState([]);
+  const [selectedSemester, setSelectedSemester] = useState("1st");
+  const [selectedSection, setSelectedSection] = useState("");
 
   // Form states with validation
   const [newUser, setNewUser] = useState({
@@ -44,8 +47,6 @@ const Admin = () => {
     yearLevelId: "",
     semester: "1st",
     units: 3,
-    startTime: "",
-    endTime: "",
     day: "",
   });
   const [subjectErrors, setSubjectErrors] = useState({});
@@ -72,8 +73,6 @@ const Admin = () => {
       yearLevelId: "",
       semester: "1st",
       units: 3,
-      startTime: "",
-      endTime: "",
       day: "",
     });
     setIsEditing(false);
@@ -155,6 +154,13 @@ const Admin = () => {
             );
             setRooms(Array.isArray(roomsRes.data) ? roomsRes.data : []);
             break;
+          case "scheduler":
+            const schedulesRes = await axios.get(
+              `${API_BASE_URL}/api/auth/admin/get-schedules`,
+              { headers }
+            );
+            setSchedules(Array.isArray(schedulesRes.data) ? schedulesRes.data : []);
+            break;
         }
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -222,7 +228,6 @@ const Admin = () => {
     if (!newSubject.semester) errors.semester = "Semester is required";
     if (!newSubject.units || newSubject.units < 1)
       errors.units = "Units must be at least 1";
-    if (!newSubject.startTime) errors.startTime = "Start time is required";
     if (!newSubject.day) errors.day = "Day is required";
     setSubjectErrors(errors);
     return Object.keys(errors).length === 0;
@@ -233,26 +238,6 @@ const Admin = () => {
     if (!newRoom.room) errors.room = "Room name is required";
     setRoomErrors(errors);
     return Object.keys(errors).length === 0;
-  };
-
-  // Add function to calculate end time
-  const calculateEndTime = (startTime) => {
-    if (!startTime) return "";
-    const [hours, minutes] = startTime.split(":").map(Number);
-    let endHours = hours + 3;
-    if (endHours >= 24) {
-      endHours -= 24;
-    }
-    return `${endHours.toString().padStart(2, "0")}:${minutes
-      .toString()
-      .padStart(2, "0")}`;
-  };
-
-  // Add handler for start time change
-  const handleStartTimeChange = (e) => {
-    const startTime = e.target.value;
-    const endTime = calculateEndTime(startTime);
-    setNewSubject({ ...newSubject, startTime, endTime });
   };
 
   // Add search functionality
@@ -430,8 +415,6 @@ const Admin = () => {
           yearLevelId: item.yearLevelId,
           semester: item.semester,
           units: item.units,
-          startTime: item.startTime,
-          endTime: item.endTime,
           day: item.day,
         });
         break;
@@ -728,6 +711,75 @@ const Admin = () => {
       } else {
         setError("Failed to save room. Please try again.");
       }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Add this function to handle schedule generation
+  const handleGenerateSchedules = async () => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem("authToken");
+      if (!token) {
+        setError("No authentication token found. Please log in again.");
+        return;
+      }
+
+      const headers = {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      };
+
+      await axios.post(
+        `${API_BASE_URL}/api/auth/admin/generate-schedules`,
+        {},
+        { headers }
+      );
+
+      setSuccess("Schedules generated successfully");
+      
+      // Refresh schedules
+      const schedulesRes = await axios.get(
+        `${API_BASE_URL}/api/auth/admin/get-schedules`,
+        { headers }
+      );
+      setSchedules(Array.isArray(schedulesRes.data) ? schedulesRes.data : []);
+    } catch (error) {
+      console.error("Error generating schedules:", error);
+      setError("Failed to generate schedules. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Add this function to handle schedule deletion
+  const handleDeleteSchedules = async () => {
+    if (!window.confirm("Are you sure you want to delete all schedules?")) return;
+
+    try {
+      setLoading(true);
+      const token = localStorage.getItem("authToken");
+      if (!token) {
+        setError("No authentication token found. Please log in again.");
+        return;
+      }
+
+      const headers = {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      };
+
+      await axios.delete(
+        `${API_BASE_URL}/api/auth/admin/delete-schedules`,
+        { headers }
+      );
+
+      setSuccess("All schedules deleted successfully");
+      setSchedules([]);
+    } catch (error) {
+      console.error("Error deleting schedules:", error);
+      setError("Failed to delete schedules. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -1154,7 +1206,7 @@ const Admin = () => {
                   <div>
                     <input
                       type="text"
-                      placeholder="Subject Code"
+                      placeholder="Subject Code (e.g., IT101)"
                       value={newSubject.subjectCode}
                       onChange={(e) =>
                         setNewSubject({
@@ -1175,7 +1227,7 @@ const Admin = () => {
                   <div>
                     <input
                       type="text"
-                      placeholder="Subject Name"
+                      placeholder="Subject Name (e.g., Introduction to Programming)"
                       value={newSubject.subjectName}
                       onChange={(e) =>
                         setNewSubject({
@@ -1267,26 +1319,6 @@ const Admin = () => {
                     )}
                   </div>
                   <div>
-                    <input
-                      type="number"
-                      placeholder="Units"
-                      value={newSubject.units}
-                      onChange={(e) =>
-                        setNewSubject({
-                          ...newSubject,
-                          units: parseInt(e.target.value),
-                        })
-                      }
-                      min="1"
-                      className={`form-input ${
-                        subjectErrors.units ? "error" : ""
-                      }`}
-                    />
-                    {subjectErrors.units && (
-                      <span className="error-text">{subjectErrors.units}</span>
-                    )}
-                  </div>
-                  <div>
                     <select
                       value={newSubject.day}
                       onChange={(e) =>
@@ -1310,26 +1342,23 @@ const Admin = () => {
                   </div>
                   <div>
                     <input
-                      type="time"
-                      value={newSubject.startTime}
-                      onChange={handleStartTimeChange}
+                      type="number"
+                      placeholder="Units (e.g., 3)"
+                      value={newSubject.units}
+                      onChange={(e) =>
+                        setNewSubject({
+                          ...newSubject,
+                          units: parseInt(e.target.value),
+                        })
+                      }
+                      min="1"
                       className={`form-input ${
-                        subjectErrors.startTime ? "error" : ""
+                        subjectErrors.units ? "error" : ""
                       }`}
                     />
-                    {subjectErrors.startTime && (
-                      <span className="error-text">
-                        {subjectErrors.startTime}
-                      </span>
+                    {subjectErrors.units && (
+                      <span className="error-text">{subjectErrors.units}</span>
                     )}
-                  </div>
-                  <div>
-                    <input
-                      type="time"
-                      value={newSubject.endTime}
-                      disabled
-                      className="form-input"
-                    />
                   </div>
                 </div>
                 <div className="form-actions">
@@ -1355,26 +1384,32 @@ const Admin = () => {
                 {subjects && subjects.length > 0 ? (
                   subjects.map((subject) => (
                     <div key={subject._id} className="data-card">
-                      <h3 className="data-title">{subject.subjectName}</h3>
-                      <p className="data-subtitle">
-                        Code: {subject.subjectCode}
-                      </p>
-                      <p className="data-subtitle">
-                        Course:{" "}
-                        {subject.courseId?.course || 'Not assigned'}
-                      </p>
-                      <p className="data-subtitle">
-                        Year Level:{" "}
-                        {subject.yearLevelId?.name || 'Not assigned'}
-                      </p>
-                      <p className="data-subtitle">
-                        Semester: {subject.semester}
-                      </p>
-                      <p className="data-subtitle">Units: {subject.units}</p>
-                      <p className="data-subtitle">
-                        Schedule: {subject.day} {subject.startTime} -{" "}
-                        {subject.endTime}
-                      </p>
+                      <div className="data-card-header">
+                        <h3 className="data-title">{subject.subjectName}</h3>
+                        <span className="data-code">{subject.subjectCode}</span>
+                      </div>
+                      <div className="data-card-content">
+                        <div className="data-info-group">
+                          <p className="data-label">Course:</p>
+                          <p className="data-value">{subject.courseId?.course || 'Not assigned'}</p>
+                        </div>
+                        <div className="data-info-group">
+                          <p className="data-label">Year Level:</p>
+                          <p className="data-value">{subject.yearLevelId?.name || 'Not assigned'}</p>
+                        </div>
+                        <div className="data-info-group">
+                          <p className="data-label">Semester:</p>
+                          <p className="data-value">{subject.semester}</p>
+                        </div>
+                        <div className="data-info-group">
+                          <p className="data-label">Units:</p>
+                          <p className="data-value">{subject.units}</p>
+                        </div>
+                        <div className="data-info-group">
+                          <p className="data-label">Day:</p>
+                          <p className="data-value">{subject.day}</p>
+                        </div>
+                      </div>
                       <div className="action-buttons">
                         <button
                           onClick={() => handleEdit(subject)}
@@ -1460,6 +1495,88 @@ const Admin = () => {
                 ) : (
                   <p className="empty-state">No rooms found</p>
                 )}
+              </div>
+            </div>
+          )}
+
+          {/* Scheduler Section */}
+          {activeTab === "scheduler" && (
+            <div>
+              <h2 className="section-header">Schedule Management</h2>
+              <div className="scheduler-controls">
+                <div className="filter-controls">
+                  <select
+                    value={selectedSemester}
+                    onChange={(e) => setSelectedSemester(e.target.value)}
+                    className="form-select"
+                  >
+                    <option value="1st">1st Semester</option>
+                    <option value="2nd">2nd Semester</option>
+                  </select>
+                  <select
+                    value={selectedSection}
+                    onChange={(e) => setSelectedSection(e.target.value)}
+                    className="form-select"
+                  >
+                    <option value="">All Sections</option>
+                    {sections.map((section) => (
+                      <option key={section._id} value={section._id}>
+                        {section.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="action-controls">
+                  <button
+                    onClick={handleGenerateSchedules}
+                    className="submit-button"
+                    disabled={loading}
+                  >
+                    Generate Schedules
+                  </button>
+                  <button
+                    onClick={handleDeleteSchedules}
+                    className="delete-button"
+                    disabled={loading}
+                  >
+                    Delete All Schedules
+                  </button>
+                </div>
+              </div>
+
+              <div className="schedule-grid">
+                {schedules
+                  .filter(
+                    (schedule) =>
+                      schedule.semester === selectedSemester &&
+                      (!selectedSection || schedule.sectionId._id === selectedSection)
+                  )
+                  .map((schedule) => (
+                    <div key={schedule._id} className="schedule-card">
+                      <div className="schedule-header">
+                        <h3 className="schedule-title">
+                          {schedule.subjectId.subjectName}
+                        </h3>
+                        <span className="schedule-code">
+                          {schedule.subjectId.subjectCode}
+                        </span>
+                      </div>
+                      <div className="schedule-content">
+                        <div className="schedule-info">
+                          <p className="schedule-section">
+                            Section: {schedule.sectionId.name}
+                          </p>
+                          <p className="schedule-time">
+                            {schedule.startTime} - {schedule.endTime}
+                          </p>
+                          <p className="schedule-day">{schedule.day}</p>
+                          <p className="schedule-semester">
+                            {schedule.semester} Semester
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
               </div>
             </div>
           )}

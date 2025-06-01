@@ -1,6 +1,6 @@
 const Section = require("../models/Sections");
 const Course = require("../models/Courses");
-const Year = require("../models/YearLevel"); // Assuming you have a Year model
+const YearLevel = require("../models/YearLevel"); // Fixed import name
 
 // Create a new Section
 const createSection = async (req, res) => {
@@ -18,7 +18,7 @@ const createSection = async (req, res) => {
     }
 
     // Check if the year exists
-    const year = await Year.findById(yearId);
+    const year = await YearLevel.findById(yearId); // Fixed model reference
     if (!year) {
       return res.status(400).json({ message: "Year not found" });
     }
@@ -85,7 +85,7 @@ const updateSection = async (req, res) => {
 
     // Validate yearId if provided
     if (yearId) {
-      const year = await Year.findById(yearId);
+      const year = await YearLevel.findById(yearId); // Fixed model reference
       if (!year) {
         return res.status(400).json({ message: "Year not found" });
       }

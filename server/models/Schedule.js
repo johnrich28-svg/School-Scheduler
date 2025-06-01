@@ -2,49 +2,50 @@ const mongoose = require("mongoose");
 
 const scheduleSchema = new mongoose.Schema(
   {
-    subjectId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Subject",
-      required: true,
-    },
     sectionId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Section",
       required: true,
     },
-    professorId: {
+    subjectId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-    },
-    timeSlotId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "TimeSlot",
+      ref: "Subject",
       required: true,
     },
     day: {
       type: String,
-      enum: [
-        "Monday",
-        "Tuesday",
-        "Wednesday",
-        "Thursday",
-        "Friday",
-        "Saturday",
-      ],
+      required: true,
+      enum: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
+    },
+    startTime: {
+      type: String,
+      required: true,
+    },
+    endTime: {
+      type: String,
       required: true,
     },
     semester: {
       type: String,
-      enum: ["1st", "2nd"],
       required: true,
+      enum: ["1st", "2nd"],
     },
-    academicYear: {
-      type: String,
-      required: true, // e.g., "2024-2025"
+    isActive: {
+      type: Boolean,
+      default: true,
     },
   },
-  { timestamps: true }
+  {
+    timestamps: true,
+  }
 );
 
-module.exports = mongoose.model("Schedule", scheduleSchema);
+// Create compound index to prevent scheduling conflicts
+scheduleSchema.index(
+  { sectionId: 1, day: 1, startTime: 1, endTime: 1 },
+  { unique: true }
+);
+
+const Schedule = mongoose.model("Schedule", scheduleSchema);
+
+module.exports = Schedule;

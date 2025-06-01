@@ -16,14 +16,6 @@ const subjectSchema = new mongoose.Schema({
     enum: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
     required: true,
   },
-  startTime: {
-    type: String,
-    required: true,
-  },
-  endTime: {
-    type: String,
-    required: true,
-  },
   units: Number,
 });
 

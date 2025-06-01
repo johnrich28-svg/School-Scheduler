@@ -788,6 +788,21 @@ const Admin = () => {
     }
   };
 
+  // Inside the Admin component, add this function
+  const getUniqueSchedules = (schedules, semester) => {
+    const seenSubjects = new Set();
+    return schedules
+      .filter(schedule => schedule.semester === semester)
+      .filter(schedule => {
+        const key = `${schedule.subjectId._id}-${schedule.semester}`;
+        if (seenSubjects.has(key)) {
+          return false;
+        }
+        seenSubjects.add(key);
+        return true;
+      });
+  };
+
   // Clear success message after 3 seconds
   useEffect(() => {
     if (success) {
@@ -1548,14 +1563,10 @@ const Admin = () => {
               </div>
 
               <div className="schedule-grid">
-                {schedules
-                  .filter(
-                    (schedule) =>
-                      schedule.semester === selectedSemester &&
-                      (!selectedSection || schedule.sectionId._id === selectedSection)
-                  )
+                {getUniqueSchedules(schedules, selectedSemester)
+                  .filter(schedule => !selectedSection || schedule.sectionId._id === selectedSection)
                   .map((schedule) => (
-                    <div key={schedule._id} className="schedule-card">
+                    <div key={`${schedule.subjectId._id}-${schedule.semester}`} className="schedule-card">
                       <div className="schedule-header">
                         <h3 className="schedule-title">
                           {schedule.subjectId.subjectName}

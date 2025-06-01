@@ -86,7 +86,10 @@ const Register = () => {
     ) {
       setFormData((prev) => ({
         ...prev,
-        preferredSections: [...prev.preferredSections, selectedPreferredSection],
+        preferredSections: [
+          ...prev.preferredSections,
+          selectedPreferredSection,
+        ],
       }));
       setSelectedPreferredSection(""); // clear selection
     }
@@ -96,7 +99,9 @@ const Register = () => {
   const removePreferredSection = (sectionId) => {
     setFormData((prev) => ({
       ...prev,
-      preferredSections: prev.preferredSections.filter((id) => id !== sectionId),
+      preferredSections: prev.preferredSections.filter(
+        (id) => id !== sectionId
+      ),
     }));
   };
 

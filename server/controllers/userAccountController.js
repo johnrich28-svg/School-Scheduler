@@ -15,7 +15,7 @@ const createUser = async (req, res) => {
     semester,
     passedSubjects,
     requestedSubjects,
-    preferredSubjects,
+    preferredSections,
   } = req.body;
 
   if (!username || !email || !password || !role) {
@@ -81,15 +81,27 @@ const createUser = async (req, res) => {
     // 🔍 Handle professor-specific fields
     if (role === "professor") {
       if (
-        !preferredSubjects ||
-        !Array.isArray(preferredSubjects) ||
-        preferredSubjects.length === 0
+        !preferredSections ||
+        !Array.isArray(preferredSections) ||
+        preferredSections.length === 0
       ) {
         return res
           .status(400)
-          .json({ message: "Preferred subjects are required for professors" });
+          .json({ message: "Preferred sections are required for professors" });
       }
-      user.preferredSubjects = preferredSubjects;
+
+      // Validate that all section IDs are valid
+      for (const sectionId of preferredSections) {
+        if (!mongoose.Types.ObjectId.isValid(sectionId)) {
+          return res.status(400).json({ message: "Invalid Section ID format" });
+        }
+        const section = await Section.findById(sectionId);
+        if (!section) {
+          return res.status(404).json({ message: "Section not found" });
+        }
+      }
+
+      user.preferredSections = preferredSections;
     }
 
     await user.save();

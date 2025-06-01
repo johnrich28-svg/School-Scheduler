@@ -17,11 +17,6 @@ const scheduleSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
-    roomId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Room",
-      required: true,
-    },
     timeSlotId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "TimeSlot",

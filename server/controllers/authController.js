@@ -33,7 +33,7 @@ const registerUser = async (req, res) => {
     studentType,
     passedSubjects,
     requestedSubjects,
-    preferredSubjects,
+    preferredSections,
   } = req.body;
 
   if (!["admin", "student", "professor"].includes(role)) {
@@ -116,16 +116,27 @@ const registerUser = async (req, res) => {
     // ----- Professor Validation -----
     if (role === "professor") {
       if (
-        !preferredSubjects ||
-        !Array.isArray(preferredSubjects) ||
-        preferredSubjects.length === 0
+        !preferredSections ||
+        !Array.isArray(preferredSections) ||
+        preferredSections.length === 0
       ) {
         return res
           .status(400)
-          .json({ message: "Preferred subjects are required for professors" });
+          .json({ message: "Preferred sections are required for professors" });
       }
 
-      newUser.preferredSubjects = preferredSubjects;
+      // Validate that all section IDs are valid
+      for (const sectionId of preferredSections) {
+        if (!isValidObjectId(sectionId)) {
+          return res.status(400).json({ message: "Invalid Section ID format" });
+        }
+        const section = await Section.findById(sectionId);
+        if (!section) {
+          return res.status(404).json({ message: "Section not found" });
+        }
+      }
+
+      newUser.preferredSections = preferredSections;
     }
 
     await newUser.save();
@@ -175,7 +186,7 @@ const loginUser = async (req, res) => {
       }
     } else if (user.role === "professor") {
       user = await user.populate([
-        { path: "preferredSubjects", select: "subjectName subjectCode" },
+        { path: "preferredSections", select: "sectionName" },
       ]);
     }
 
@@ -199,7 +210,7 @@ const loginUser = async (req, res) => {
         userData.requestedSubjects = user.requestedSubjects;
       }
     } else if (user.role === "professor") {
-      userData.preferredSubjects = user.preferredSubjects;
+      userData.preferredSections = user.preferredSections;
       userData.profAvail = user.profAvail; // If you use this field
     }
 

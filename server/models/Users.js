@@ -89,18 +89,20 @@ const userSchema = new mongoose.Schema(
     ],
 
     // ---------- Professor-specific ----------
+    preferredSections: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Section",
+        required: function () {
+          return this.role === "professor";
+        },
+      },
+    ],
     profAvail: [
       {
         day: String,
         startTime: String,
         endTime: String,
-      },
-    ],
-
-    preferredSubjects: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Subject",
       },
     ],
   },

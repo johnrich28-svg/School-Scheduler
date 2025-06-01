@@ -2,7 +2,6 @@ const Schedule = require("../models/Schedule");
 const Subject = require("../models/Subjects");
 const User = require("../models/Users");
 const Section = require("../models/Sections");
-const Room = require("../models/Room");
 const TimeSlot = require("../models/TimeSlot");
 
 const autoGenerateSchedules = async (req, res) => {
@@ -19,44 +18,36 @@ const autoGenerateSchedules = async (req, res) => {
     if (sections.length === 0)
       return res.status(400).json({ message: "No sections found." });
 
-    const rooms = await Room.find();
-    if (rooms.length === 0)
-      return res.status(400).json({ message: "No rooms found." });
-
     const timeSlots = await TimeSlot.find().sort({ sequence: 1 });
     if (timeSlots.length === 0)
       return res.status(400).json({ message: "No timeslots found." });
 
-    // Booking tracker to avoid conflicts for professor, room, and section
+    // Booking tracker to avoid conflicts for professor and section
     const bookingTracker = {};
 
-    const isAvailable = (day, timeSlotId, professorId, roomId, sectionId) => {
+    const isAvailable = (day, timeSlotId, professorId, sectionId) => {
       const key = `${day}-${timeSlotId}`;
       if (!bookingTracker[key]) {
         bookingTracker[key] = {
           professors: new Set(),
-          rooms: new Set(),
           sections: new Set(),
         };
       }
       return (
         !bookingTracker[key].professors.has(professorId.toString()) &&
-        !bookingTracker[key].rooms.has(roomId.toString()) &&
         !bookingTracker[key].sections.has(sectionId.toString())
       );
     };
 
-    const bookSlot = (day, timeSlotId, professorId, roomId, sectionId) => {
+    const bookSlot = (day, timeSlotId, professorId, sectionId) => {
       const key = `${day}-${timeSlotId}`;
       if (!bookingTracker[key]) {
         bookingTracker[key] = {
           professors: new Set(),
-          rooms: new Set(),
           sections: new Set(),
         };
       }
       bookingTracker[key].professors.add(professorId.toString());
-      bookingTracker[key].rooms.add(roomId.toString());
       bookingTracker[key].sections.add(sectionId.toString());
     };
 
@@ -77,8 +68,8 @@ const autoGenerateSchedules = async (req, res) => {
         let scheduled = false;
 
         const availableProfessors = professors.filter((prof) => {
-          return prof.preferredSubjects.some(
-            (psubjId) => psubjId.toString() === subject._id.toString()
+          return prof.preferredSections.some(
+            (psectionId) => psectionId.toString() === section._id.toString()
           );
         });
 
@@ -98,38 +89,33 @@ const autoGenerateSchedules = async (req, res) => {
             });
             if (!isProfAvailable) continue;
 
-            for (const room of rooms) {
-              if (
-                isAvailable(
-                  timeSlot.day,
-                  timeSlot._id,
-                  prof._id,
-                  room._id,
-                  section._id
-                )
-              ) {
-                bookSlot(
-                  timeSlot.day,
-                  timeSlot._id,
-                  prof._id,
-                  room._id,
-                  section._id
-                );
+            if (
+              isAvailable(
+                timeSlot.day,
+                timeSlot._id,
+                prof._id,
+                section._id
+              )
+            ) {
+              bookSlot(
+                timeSlot.day,
+                timeSlot._id,
+                prof._id,
+                section._id
+              );
 
-                schedulesToCreate.push({
-                  subjectId: subject._id,
-                  professorId: prof._id,
-                  sectionId: section._id,
-                  roomId: room._id,
-                  timeSlotId: timeSlot._id,
-                  day: timeSlot.day,
-                  semester,
-                  academicYear,
-                });
+              schedulesToCreate.push({
+                subjectId: subject._id,
+                professorId: prof._id,
+                sectionId: section._id,
+                timeSlotId: timeSlot._id,
+                day: timeSlot.day,
+                semester,
+                academicYear,
+              });
 
-                scheduled = true;
-                break;
-              }
+              scheduled = true;
+              break;
             }
           }
         }

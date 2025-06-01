@@ -50,9 +50,22 @@ const createSection = async (req, res) => {
 // Get all Sections
 const getSections = async (req, res) => {
   try {
-    const sections = await Section.find().populate("courseId", "course"); // Populate courseId field
+    const sections = await Section.find()
+      .populate({
+        path: 'courseId',
+        select: 'course',
+        model: 'Course'
+      })
+      .populate({
+        path: 'yearId',
+        select: 'name',
+        model: 'YearLevel'
+      });
+    
+    console.log('Fetched sections:', sections); // Debug log
     res.json(sections);
   } catch (error) {
+    console.error('Error in getSections:', error); // Debug log
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
@@ -87,7 +100,9 @@ const updateSection = async (req, res) => {
         runValidators: true, // apply schema validation
         context: "query", // required for validators like max
       }
-    );
+    )
+      .populate("courseId", "course")
+      .populate("yearId", "name");
 
     if (!updatedSection) {
       return res.status(404).json({ message: "Section not found" });
@@ -126,7 +141,9 @@ const searchSections = async (req, res) => {
 
     const sections = await Section.find({
       name: { $regex: searchQuery, $options: "i" }, // Partial match for section name
-    }).populate("courseId", "course");
+    })
+      .populate("courseId", "course")
+      .populate("yearId", "name");
 
     if (sections.length === 0) {
       return res.status(404).json({ message: "No sections found" });

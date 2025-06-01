@@ -16,38 +16,37 @@ const generateSchedules = asyncHandler(async (req, res) => {
     // Clear existing schedules
     await Schedule.deleteMany({});
 
-    // Get all sections
+    // Get all sections with populated fields
     const sections = await Section.find({})
       .populate("courseId")
       .populate("yearId");
 
-    // Get all subjects
+    // Get all subjects with populated fields
     const subjects = await Subject.find({})
       .populate("courseId")
       .populate("yearLevelId");
-
-    // Group subjects by semester
-    const subjectsBySemester = {
-      "1st": subjects.filter(subject => subject.semester === "1st"),
-      "2nd": subjects.filter(subject => subject.semester === "2nd"),
-    };
 
     const generatedSchedules = [];
 
     // Generate schedules for each section
     for (const section of sections) {
       // Get subjects for this section's course and year
-      const sectionSubjects = subjects.filter(
-        subject =>
+      const sectionSubjects = subjects.filter(subject => {
+        return (
           subject.courseId._id.toString() === section.courseId._id.toString() &&
           subject.yearLevelId._id.toString() === section.yearId._id.toString()
-      );
+        );
+      });
+
+      // Group subjects by semester
+      const subjectsBySemester = {
+        "1st": sectionSubjects.filter(subject => subject.semester === "1st"),
+        "2nd": sectionSubjects.filter(subject => subject.semester === "2nd"),
+      };
 
       // Generate schedule for each semester
       for (const semester of ["1st", "2nd"]) {
-        const semesterSubjects = sectionSubjects.filter(
-          subject => subject.semester === semester
-        );
+        const semesterSubjects = subjectsBySemester[semester];
 
         // Assign time slots for each subject
         for (const subject of semesterSubjects) {
@@ -87,8 +86,11 @@ const generateSchedules = asyncHandler(async (req, res) => {
       schedules: generatedSchedules,
     });
   } catch (error) {
-    res.status(500);
-    throw new Error(`Failed to generate schedules: ${error.message}`);
+    console.error("Schedule generation error:", error);
+    res.status(500).json({
+      message: "Failed to generate schedules",
+      error: error.message
+    });
   }
 });
 

@@ -12,7 +12,7 @@ const sectionSchema = new mongoose.Schema({
   },
   yearId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "Year", // References the Year model
+    ref: "YearLevel", // References the YearLevel model
     required: true, // You must assign a year to each section
   },
   order: {

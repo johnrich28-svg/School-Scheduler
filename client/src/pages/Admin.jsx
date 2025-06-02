@@ -731,26 +731,32 @@ const Admin = () => {
         "Content-Type": "application/json",
       };
 
-      // If a section is selected, only generate schedules for that section
-      const requestBody = selectedSection ? { sectionId: selectedSection } : {};
+      // Include both section and semester in the request
+      const requestBody = {
+        sectionId: selectedSection || undefined,
+        semester: selectedSemester
+      };
 
-      await axios.post(
+      const response = await axios.post(
         `${API_BASE_URL}/api/auth/admin/generate-schedules`,
         requestBody,
         { headers }
       );
 
-      setSuccess("Schedules generated successfully");
-      
-      // Refresh schedules
-      const schedulesRes = await axios.get(
-        `${API_BASE_URL}/api/auth/admin/get-schedules`,
-        { headers }
-      );
-      setSchedules(Array.isArray(schedulesRes.data) ? schedulesRes.data : []);
+      // Check if schedules were actually generated
+      if (response.data.schedules && response.data.schedules.length > 0) {
+        setSuccess(response.data.message || "Schedules generated successfully");
+        setSchedules(response.data.schedules);
+      } else {
+        setError("No schedules were generated. Please check if there are subjects available for the selected section and semester.");
+      }
     } catch (error) {
       console.error("Error generating schedules:", error);
-      setError("Failed to generate schedules. Please try again.");
+      if (error.response && error.response.data && error.response.data.message) {
+        setError(error.response.data.message);
+      } else {
+        setError("Failed to generate schedules. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
@@ -788,13 +794,13 @@ const Admin = () => {
     }
   };
 
-  // Inside the Admin component, add this function
+  // Update the getUniqueSchedules function to properly handle semester filtering
   const getUniqueSchedules = (schedules, semester) => {
     const seenSubjects = new Set();
     return schedules
       .filter(schedule => schedule.semester === semester)
       .filter(schedule => {
-        const key = `${schedule.subjectId._id}-${schedule.semester}`;
+        const key = `${schedule.subjectId._id}-${schedule.sectionId._id}-${schedule.semester}`;
         if (seenSubjects.has(key)) {
           return false;
         }
@@ -1519,22 +1525,45 @@ const Admin = () => {
 
           {/* Scheduler Section */}
           {activeTab === "scheduler" && (
-            <div>
-              <h2 className="section-header">Schedule Management</h2>
-              <div className="scheduler-controls">
-                <div className="filter-controls">
+            <div className="scheduler-container">
+              <div className="scheduler-header">
+                <h2 className="section-header">Schedule Management</h2>
+                <div className="scheduler-actions">
+                  <button
+                    onClick={handleGenerateSchedules}
+                    className="action-button generate-button"
+                    disabled={loading}
+                  >
+                    {loading ? "Generating..." : "Generate Schedules"}
+                  </button>
+                  <button
+                    onClick={handleDeleteSchedules}
+                    className="action-button delete-button"
+                    disabled={loading}
+                  >
+                    Delete All Schedules
+                  </button>
+                </div>
+              </div>
+
+              <div className="scheduler-filters">
+                <div className="filter-group">
+                  <label>Semester:</label>
                   <select
                     value={selectedSemester}
                     onChange={(e) => setSelectedSemester(e.target.value)}
-                    className="form-select"
+                    className="filter-select"
                   >
                     <option value="1st">1st Semester</option>
                     <option value="2nd">2nd Semester</option>
                   </select>
+                </div>
+                <div className="filter-group">
+                  <label>Section:</label>
                   <select
                     value={selectedSection}
                     onChange={(e) => setSelectedSection(e.target.value)}
-                    className="form-select"
+                    className="filter-select"
                   >
                     <option value="">All Sections</option>
                     {sections.map((section) => (
@@ -1544,53 +1573,62 @@ const Admin = () => {
                     ))}
                   </select>
                 </div>
-                <div className="action-controls">
-                  <button
-                    onClick={handleGenerateSchedules}
-                    className="submit-button"
-                    disabled={loading}
-                  >
-                    Generate Schedules
-                  </button>
-                  <button
-                    onClick={handleDeleteSchedules}
-                    className="delete-button"
-                    disabled={loading}
-                  >
-                    Delete All Schedules
-                  </button>
-                </div>
               </div>
 
-              <div className="schedule-grid">
-                {getUniqueSchedules(schedules, selectedSemester)
-                  .filter(schedule => !selectedSection || schedule.sectionId._id === selectedSection)
-                  .map((schedule) => (
-                    <div key={`${schedule.subjectId._id}-${schedule.semester}`} className="schedule-card">
-                      <div className="schedule-header">
-                        <h3 className="schedule-title">
-                          {schedule.subjectId.subjectName}
-                        </h3>
-                        <span className="schedule-code">
-                          {schedule.subjectId.subjectCode}
-                        </span>
-                      </div>
-                      <div className="schedule-content">
-                        <div className="schedule-info">
-                          <p className="schedule-section">
-                            Section: {schedule.sectionId.name}
-                          </p>
-                          <p className="schedule-time">
-                            {schedule.startTime} - {schedule.endTime}
-                          </p>
-                          <p className="schedule-day">{schedule.day}</p>
-                          <p className="schedule-semester">
-                            {schedule.semester} Semester
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+              <div className="schedule-display">
+                {loading ? (
+                  <div className="loading-container">
+                    <div className="loading-spinner"></div>
+                    <p>Generating schedules...</p>
+                  </div>
+                ) : schedules.length === 0 ? (
+                  <div className="empty-state">
+                    <div className="empty-state-icon">📅</div>
+                    <h3>No Schedules Found</h3>
+                    <p>Generate schedules to see them here.</p>
+                  </div>
+                ) : (
+                  <div className="schedule-table-wrapper">
+                    <table className="schedule-table">
+                      <thead>
+                        <tr>
+                          <th>Subject Code</th>
+                          <th>Subject Name</th>
+                          <th>Section</th>
+                          <th>Day</th>
+                          <th>Time</th>
+                          <th>Duration</th>
+                          <th>Semester</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {getUniqueSchedules(schedules, selectedSemester)
+                          .filter(schedule => !selectedSection || schedule.sectionId._id === selectedSection)
+                          .map((schedule) => {
+                            const startTime = new Date(`2000-01-01 ${schedule.startTime}`);
+                            const endTime = new Date(`2000-01-01 ${schedule.endTime}`);
+                            const duration = (endTime - startTime) / (1000 * 60 * 60);
+                            
+                            return (
+                              <tr key={schedule._id} className="schedule-row">
+                                <td className="subject-code">{schedule.subjectId.subjectCode}</td>
+                                <td className="subject-name">{schedule.subjectId.subjectName}</td>
+                                <td className="section-name">{schedule.sectionId.name}</td>
+                                <td className="day">{schedule.day}</td>
+                                <td className="time">
+                                  <span className="time-range">
+                                    {schedule.startTime} - {schedule.endTime}
+                                  </span>
+                                </td>
+                                <td className="duration">{duration} hours</td>
+                                <td className="semester">{schedule.semester}</td>
+                              </tr>
+                            );
+                          })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
             </div>
           )}

@@ -4,15 +4,13 @@ const Section = require("../models/Sections");
 const TimeSlot = require("../models/TimeSlot");
 const User = require("../models/Users");
 const asyncHandler = require("express-async-handler");
+const jwt = require("jsonwebtoken");
 
 // Time slots configuration
 const TIME_SLOTS = [
-  { start: "08:00", end: "09:30" },
-  { start: "09:30", end: "11:00" },
-  { start: "11:00", end: "12:30" },
-  { start: "13:00", end: "14:30" },
-  { start: "14:30", end: "16:00" },
-  { start: "16:00", end: "17:30" }
+  { start: "08:00", end: "11:00" },  // 3 hours
+  { start: "11:00", end: "14:00" },  // 3 hours
+  { start: "14:00", end: "17:00" }   // 3 hours
 ];
 
 const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
@@ -22,14 +20,143 @@ const isValidTimeRange = (startTime, endTime) => {
   const start = new Date(`2000-01-01 ${startTime}`);
   const end = new Date(`2000-01-01 ${endTime}`);
   const minTime = new Date(`2000-01-01 08:00`);
-  const maxTime = new Date(`2000-01-01 17:30`);
+  const maxTime = new Date(`2000-01-01 17:00`);
   return start >= minTime && end <= maxTime;
 };
 
 // Helper function to check for conflicts in a section
-const hasConflict = async (sectionId, day, startTime, endTime, semester) => {
-  const existingSchedule = await Schedule.findOne({
+const hasConflict = async (sectionId, day, startTime, endTime, semester, academicYear = null, roomId = null) => {
+  try {
+    // First get the section details to check course and year
+    const section = await Section.findById(sectionId).populate('courseId yearId');
+    if (!section) {
+      console.error('Section not found:', sectionId);
+      return true;
+    }
+
+    // Find all sections in the same course and year
+    const relatedSections = await Section.find({
+      courseId: section.courseId._id,
+      yearId: section.yearId._id
+    });
+
+    // Get all section IDs that are NOT in the same course and year
+    const unrelatedSectionIds = await Section.find({
+      $or: [
+        { courseId: { $ne: section.courseId._id } },
+        { yearId: { $ne: section.yearId._id } }
+      ]
+    }).select('_id');
+
+    // Build the query for checking conflicts
+    const conflictQuery = {
+      sectionId: { $in: unrelatedSectionIds },
+      day,
+      semester,
+      $or: [
+        {
+          $and: [
+            { startTime: { $lte: startTime } },
+            { endTime: { $gt: startTime } }
+          ]
+        },
+        {
+          $and: [
+            { startTime: { $lt: endTime } },
+            { endTime: { $gte: endTime } }
+          ]
+        }
+      ]
+    };
+
+    // Add academicYear to query if provided
+    if (academicYear) {
+      conflictQuery.academicYear = academicYear;
+    }
+
+    // Add roomId to query if provided (room conflicts)
+    if (roomId) {
+      conflictQuery.roomId = roomId;
+    }
+
+    // Check for conflicts only with unrelated sections
+    const existingSchedule = await Schedule.findOne(conflictQuery);
+
+    return !!existingSchedule;
+  } catch (error) {
+    console.error('Error checking for conflicts:', error);
+    return true; // Assume conflict if there's an error
+  }
+};
+
+// Helper function to get daily load for a section
+const getDailyLoad = async (sectionId, day, semester, academicYear = null) => {
+  try {
+    const section = await Section.findById(sectionId).populate('courseId yearId');
+    if (!section) return 0;
+
+    // Get all sections in the same course and year
+    const relatedSections = await Section.find({
+      courseId: section.courseId._id,
+      yearId: section.yearId._id
+    });
+
+    // Build query
+    const query = {
+      sectionId: { $in: relatedSections.map(s => s._id) },
+      day,
+      semester
+    };
+
+    if (academicYear) {
+      query.academicYear = academicYear;
+    }
+
+    // Calculate total hours for all related sections
+    const schedules = await Schedule.find(query);
+    
+    let totalHours = 0;
+    for (const schedule of schedules) {
+      const start = new Date(`2000-01-01 ${schedule.startTime}`);
+      const end = new Date(`2000-01-01 ${schedule.endTime}`);
+      const hours = (end - start) / (1000 * 60 * 60);
+      totalHours += hours;
+    }
+    return totalHours;
+  } catch (error) {
+    console.error('Error calculating daily load:', error);
+    return 0;
+  }
+};
+
+// Helper function to get subject hours for a section
+const getSubjectHours = async (sectionId, subjectId, semester, academicYear = null) => {
+  const query = {
     sectionId,
+    subjectId,
+    semester
+  };
+
+  if (academicYear) {
+    query.academicYear = academicYear;
+  }
+
+  const schedules = await Schedule.find(query);
+  
+  let totalHours = 0;
+  for (const schedule of schedules) {
+    const start = new Date(`2000-01-01 ${schedule.startTime}`);
+    const end = new Date(`2000-01-01 ${schedule.endTime}`);
+    const hours = (end - start) / (1000 * 60 * 60);
+    totalHours += hours;
+  }
+  return totalHours;
+};
+
+// Helper function to check for professor conflicts
+const hasProfessorConflict = async (professorId, day, startTime, endTime, semester, academicYear = null) => {
+  const query = {
+    professorId,
     day,
     semester,
     $or: [
@@ -46,236 +173,366 @@ const hasConflict = async (sectionId, day, startTime, endTime, semester) => {
         ]
       }
     ]
-  });
+  };
+
+  if (academicYear) {
+    query.academicYear = academicYear;
+  }
+
+  const existingSchedule = await Schedule.findOne(query);
   return !!existingSchedule;
 };
 
-// Helper function to get daily load for a section
-const getDailyLoad = async (sectionId, day, semester) => {
-  const schedules = await Schedule.find({
-    sectionId,
-    day,
-    semester
-  });
-  
-  let totalHours = 0;
-  for (const schedule of schedules) {
-    const start = new Date(`2000-01-01 ${schedule.startTime}`);
-    const end = new Date(`2000-01-01 ${schedule.endTime}`);
-    const hours = (end - start) / (1000 * 60 * 60);
-    totalHours += hours;
-  }
-  return totalHours;
+// Helper function to get professor's preferred sections
+const getProfessorPreferredSections = async (professorId) => {
+  const professor = await User.findOne({ _id: professorId, role: "professor" });
+  return professor?.preferredSections || [];
 };
 
-// Helper function to get subject hours for a section
-const getSubjectHours = async (sectionId, subjectId, semester) => {
-  const schedules = await Schedule.find({
-    sectionId,
-    subjectId,
-    semester
-  });
+// Helper function to find available professor for a section
+const findAvailableProfessor = async (sectionId, day, startTime, endTime, semester, academicYear = null) => {
+  const professors = await User.find({ role: "professor" });
   
-  let totalHours = 0;
-  for (const schedule of schedules) {
-    const start = new Date(`2000-01-01 ${schedule.startTime}`);
-    const end = new Date(`2000-01-01 ${schedule.endTime}`);
-    const hours = (end - start) / (1000 * 60 * 60);
-    totalHours += hours;
+  for (const professor of professors) {
+    const preferredSections = professor.preferredSections || [];
+    if (!preferredSections.includes(sectionId)) continue;
+
+    const hasConflict = await hasProfessorConflict(
+      professor._id,
+      day,
+      startTime,
+      endTime,
+      semester,
+      academicYear
+    );
+
+    if (!hasConflict) {
+      return professor._id;
+    }
   }
-  return totalHours;
+  return null;
+};
+
+// Helper function to create time slots with cycling capability
+const createTimeSlots = () => {
+  const slots = [];
+  for (const day of DAYS) {
+    for (const slot of TIME_SLOTS) {
+      slots.push({
+        day,
+        startTime: slot.start,
+        endTime: slot.end,
+        available: true
+      });
+    }
+  }
+  return slots;
+};
+
+// Helper function to check if a schedule would violate the unique constraint
+const wouldViolateUniqueConstraint = async (day, startTime, endTime, semester, academicYear = null, roomId = null) => {
+  const query = {
+    day,
+    startTime,
+    endTime,
+    semester
+  };
+
+  // The unique constraint includes roomId and academicYear
+  // If these are null, we need to check for existing null values
+  if (roomId) {
+    query.roomId = roomId;
+  } else {
+    query.roomId = { $in: [null, undefined] };
+  }
+
+  if (academicYear) {
+    query.academicYear = academicYear;
+  } else {
+    query.academicYear = { $in: [null, undefined] };
+  }
+
+  const existingSchedule = await Schedule.findOne(query);
+  return !!existingSchedule;
 };
 
 // Generate schedules for all sections or a specific section
-const generateSchedules = asyncHandler(async (req, res) => {
+const generateSchedules = async (req, res) => {
   try {
-    const { sectionId } = req.body;
+    const { sectionId, semester, academicYear } = req.body;
+    console.log('Generating schedules with params:', { sectionId, semester, academicYear });
 
-    // Step 1: Clear existing schedules
-    if (sectionId) {
-      await Schedule.deleteMany({ sectionId });
-    } else {
-      await Schedule.deleteMany({});
+    const token = req.headers.authorization?.split(" ")[1];
+    if (!token) {
+      return res.status(401).json({ message: "No token provided" });
     }
 
-    // Step 2: Fetch required data
-    const sections = sectionId 
-      ? await Section.find({ _id: sectionId }).populate("courseId").populate("yearId")
-      : await Section.find({}).populate("courseId").populate("yearId");
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    if (decoded.role !== "admin") {
+      return res.status(403).json({ message: "Not authorized" });
+    }
 
-    if (sections.length === 0) {
+    // Clear existing schedules for the selected section and semester
+    const clearQuery = {};
+    if (sectionId) clearQuery.sectionId = sectionId;
+    if (semester) clearQuery.semester = semester;
+    if (academicYear) clearQuery.academicYear = academicYear;
+    
+    const deletedCount = await Schedule.deleteMany(clearQuery);
+    console.log(`Cleared ${deletedCount.deletedCount} existing schedules`);
+
+    // Get all sections (filtered by sectionId if provided)
+    const sections = sectionId 
+      ? await Section.find({ _id: sectionId }).populate("courseId yearId")
+      : await Section.find().populate("courseId yearId");
+
+    if (!sections.length) {
       return res.status(404).json({ message: "No sections found" });
     }
 
-    const subjects = await Subject.find({})
-      .populate("courseId")
-      .populate("yearLevelId");
+    console.log('Found sections:', sections.map(s => ({
+      name: s.name,
+      course: s.courseId.course,
+      year: s.yearId.name,
+      courseId: s.courseId._id,
+      yearId: s.yearId._id
+    })));
 
-    const generatedSchedules = [];
-    const failedSchedules = [];
+    const schedulingReport = {
+      totalSections: sections.length,
+      sectionsProcessed: 0,
+      totalSubjects: 0,
+      subjectsScheduled: 0,
+      errors: []
+    };
 
-    // Step 3: Generate schedules for each section
+    // Group sections by course and year
+    const sectionGroups = {};
     for (const section of sections) {
-      console.log(`Processing section: ${section.name}`);
-      
-      // Get subjects for this section's course and year
-      const sectionSubjects = subjects.filter(subject => 
-        subject.courseId?._id?.toString() === section.courseId?._id?.toString() &&
-        subject.yearLevelId?._id?.toString() === section.yearId?._id?.toString()
-      );
+      const key = `${section.courseId._id}-${section.yearId._id}`;
+      if (!sectionGroups[key]) {
+        sectionGroups[key] = {
+          course: section.courseId.course,
+          year: section.yearId.name,
+          courseId: section.courseId._id,
+          yearId: section.yearId._id,
+          sections: []
+        };
+      }
+      sectionGroups[key].sections.push(section);
+    }
 
-      // Separate subjects by semester
-      const subjectsBySemester = {
-        "1st": sectionSubjects.filter(subject => subject.semester === "1st"),
-        "2nd": sectionSubjects.filter(subject => subject.semester === "2nd"),
-      };
+    console.log('Section groups:', Object.entries(sectionGroups).map(([key, group]) => ({
+      key,
+      course: group.course,
+      year: group.year,
+      courseId: group.courseId,
+      yearId: group.yearId,
+      sections: group.sections.map(s => s.name)
+    })));
 
-      // Process each semester
-      for (const semester of ["1st", "2nd"]) {
-        const semesterSubjects = subjectsBySemester[semester];
-        
-        if (semesterSubjects.length === 0) {
-          console.log(`No subjects found for ${semester} semester in section ${section.name}`);
+    // Process each group of sections
+    for (const [key, group] of Object.entries(sectionGroups)) {
+      try {
+        console.log(`\nProcessing group: ${group.course} - ${group.year}`);
+        console.log(`Sections in group: ${group.sections.map(s => s.name).join(', ')}`);
+
+        // Get subjects for this course and year level
+        const subjects = await Subject.find({
+          courseId: group.courseId,
+          yearLevelId: group.yearId,
+          semester: semester
+        });
+
+        console.log(`Found ${subjects.length} subjects for ${group.course} ${group.year}:`, 
+          subjects.map(s => s.subjectCode));
+
+        if (!subjects.length) {
+          schedulingReport.errors.push(`No subjects found for ${group.course} ${group.year} in ${semester} semester`);
           continue;
         }
 
+        schedulingReport.totalSubjects += subjects.length * group.sections.length;
+
         // Sort subjects by units (descending)
-        semesterSubjects.sort((a, b) => b.units - a.units);
+        subjects.sort((a, b) => b.units - a.units);
 
-        // Create all possible time slots
-        const allTimeSlots = [];
-        for (const day of DAYS) {
-          for (const timeSlot of TIME_SLOTS) {
-            allTimeSlots.push({
-              day,
-              startTime: timeSlot.start,
-              endTime: timeSlot.end
-            });
-          }
-        }
+        const baseSlots = createTimeSlots(); // This creates the template slots
 
-        // Shuffle time slots to randomize scheduling
-        for (let i = allTimeSlots.length - 1; i > 0; i--) {
-          const j = Math.floor(Math.random() * (i + 1));
-          [allTimeSlots[i], allTimeSlots[j]] = [allTimeSlots[j], allTimeSlots[i]];
-        }
+        // Process each section in the group
+        for (const section of group.sections) {
+          console.log(`\nProcessing section: ${section.name}`);
+          
+          let sectionSubjectsScheduled = 0;
+          // Each section starts from slot 0 - they can use the same time slots
+          let sectionSlotIndex = 0;
 
-        // Schedule each subject
-        for (const subject of semesterSubjects) {
-          let scheduled = false;
-          const requiredHours = 3; // Fixed 3 hours per subject
-          let scheduledHours = 0;
-          let attempts = 0;
-          const maxAttempts = 50; // Prevent infinite loops
-
-          // Try to schedule the subject
-          while (scheduledHours < requiredHours && attempts < maxAttempts) {
-            attempts++;
+          // Schedule each subject for this section with week wrapping
+          for (const subject of subjects) {
+            console.log(`\nScheduling ${subject.subjectCode} for ${section.name}`);
             
-            // Get current subject hours
-            const currentSubjectHours = await getSubjectHours(section._id, subject._id, semester);
-            if (currentSubjectHours >= requiredHours) {
-              scheduled = true;
-              break;
-            }
+            let scheduledSuccessfully = false;
+            let attempts = 0;
+            const maxAttempts = baseSlots.length * 4; // Allow checking multiple weeks
+            
+            while (!scheduledSuccessfully && attempts < maxAttempts) {
+              // Get the current slot (cycling through the week)
+              const slotIndex = sectionSlotIndex % baseSlots.length;
+              const currentSlot = baseSlots[slotIndex];
+              
+              // Check if this would violate the unique constraint
+              const wouldViolateConstraint = await wouldViolateUniqueConstraint(
+                currentSlot.day,
+                currentSlot.startTime,
+                currentSlot.endTime,
+                semester,
+                academicYear
+              );
 
-            // Try each time slot
-            for (const timeSlot of allTimeSlots) {
-              const currentLoad = await getDailyLoad(section._id, timeSlot.day, semester);
-              if (currentLoad >= 6) continue; // Skip if daily load is full
+              if (wouldViolateConstraint) {
+                console.log(`Would violate unique constraint for ${subject.subjectCode} in ${section.name} on ${currentSlot.day} ${currentSlot.startTime}-${currentSlot.endTime}`);
+                sectionSlotIndex++;
+                attempts++;
+                continue;
+              }
 
+              // Check for conflicts with this specific section
               const hasTimeConflict = await hasConflict(
                 section._id,
-                timeSlot.day,
-                timeSlot.startTime,
-                timeSlot.endTime,
-                semester
+                currentSlot.day,
+                currentSlot.startTime,
+                currentSlot.endTime,
+                semester,
+                academicYear
               );
 
               if (!hasTimeConflict) {
                 try {
-                  const schedule = await Schedule.create({
+                  // Create and save the schedule
+                  const scheduleData = {
                     sectionId: section._id,
                     subjectId: subject._id,
-                    day: timeSlot.day,
-                    startTime: timeSlot.startTime,
-                    endTime: timeSlot.endTime,
-                    semester,
-                  });
+                    day: currentSlot.day,
+                    startTime: currentSlot.startTime,
+                    endTime: currentSlot.endTime,
+                    semester
+                  };
 
-                  generatedSchedules.push(schedule);
-                  scheduledHours += 1.5; // Each slot is 1.5 hours
-                  scheduled = true;
-                  break; // Break after successful scheduling of one slot
-                } catch (err) {
-                  console.error(`Error creating schedule: ${err.message}`);
+                  // Add academicYear if provided
+                  if (academicYear) {
+                    scheduleData.academicYear = academicYear;
+                  }
+
+                  const newSchedule = new Schedule(scheduleData);
+                  await newSchedule.save();
+                  
+                  const weekNum = Math.floor(sectionSlotIndex / baseSlots.length);
+                  const weekInfo = weekNum > 0 ? ` (Week ${weekNum + 1})` : '';
+                  console.log(`Successfully scheduled ${subject.subjectCode} for ${section.name} on ${currentSlot.day} ${currentSlot.startTime}-${currentSlot.endTime}${weekInfo}`);
+                  
+                  // Move to next slot for the next subject
+                  sectionSlotIndex++;
+                  
+                  scheduledSuccessfully = true;
+                  sectionSubjectsScheduled++;
+                  schedulingReport.subjectsScheduled++;
+                  
+                } catch (error) {
+                  console.error(`Error saving schedule for ${section.name} - ${subject.subjectCode}:`, error);
+                  
+                  // Check if it's a duplicate key error
+                  if (error.code === 11000) {
+                    console.log(`Duplicate key error - skipping this slot and trying next one`);
+                    sectionSlotIndex++;
+                  } else {
+                    schedulingReport.errors.push(
+                      `Failed to save schedule for ${section.name} - ${subject.subjectCode}: ${error.message}`
+                    );
+                    break;
+                  }
                 }
+              } else {
+                // Move to next slot if there's a conflict
+                sectionSlotIndex++;
               }
+              
+              attempts++;
+            }
+
+            if (!scheduledSuccessfully) {
+              console.log(`Could not schedule ${subject.subjectCode} for ${section.name} - no available slots after ${maxAttempts} attempts`);
+              schedulingReport.errors.push(
+                `No available slots for ${subject.subjectCode} in ${section.name} after checking multiple weeks`
+              );
             }
           }
 
-          if (!scheduled || scheduledHours < requiredHours) {
-            failedSchedules.push({
-              section: section.name,
-              subject: subject.subjectCode,
-              semester,
-              units: subject.units,
-              course: subject.courseId?.course,
-              year: subject.yearLevelId?.name,
-              scheduledHours,
-              requiredHours
-            });
-          }
+          console.log(`Completed scheduling for ${section.name}: ${sectionSubjectsScheduled} out of ${subjects.length} subjects scheduled`);
+          schedulingReport.sectionsProcessed++;
         }
+
+        console.log(`\nCompleted group ${group.course} - ${group.year}`);
+
+      } catch (groupError) {
+        console.error(`Error processing section group:`, groupError);
+        schedulingReport.errors.push(
+          `Error processing section group ${group.course} - ${group.year}: ${groupError.message}`
+        );
       }
     }
 
-    // Generate report
-    const report = {
-      totalSubjects: subjects.length,
-      scheduledSubjects: generatedSchedules.length,
-      failedSubjects: failedSchedules.length,
-      failedSchedules: failedSchedules.length > 0 ? failedSchedules : undefined,
-      semesterBreakdown: {
-        "1st": {
-          total: subjects.filter(s => s.semester === "1st").length,
-          scheduled: generatedSchedules.filter(s => s.semester === "1st").length
-        },
-        "2nd": {
-          total: subjects.filter(s => s.semester === "2nd").length,
-          scheduled: generatedSchedules.filter(s => s.semester === "2nd").length
-        }
-      },
-      sectionBreakdown: sections.map(section => ({
-        section: section.name,
-        course: section.courseId?.course,
-        year: section.yearId?.name,
-        totalSubjects: subjects.filter(s => 
-          s.courseId?._id?.toString() === section.courseId?._id?.toString() &&
-          s.yearLevelId?._id?.toString() === section.yearId?._id?.toString()
-        ).length,
-        scheduledSubjects: generatedSchedules.filter(s => 
-          s.sectionId?.toString() === section._id.toString()
-        ).length
-      }))
-    };
+    // Get all schedules after generation
+    const query = {};
+    if (semester) query.semester = semester;
+    if (academicYear) query.academicYear = academicYear;
 
-    res.status(201).json({
-      message: sectionId 
-        ? "✅ Schedule generated successfully for the specified section"
-        : "✅ Schedules generated successfully for all sections",
-      schedules: generatedSchedules,
-      report: report
+    const schedules = await Schedule.find(query)
+      .populate({
+        path: "sectionId",
+        populate: [
+          { path: "courseId", select: "course" },
+          { path: "yearId", select: "name" }
+        ]
+      })
+      .populate({
+        path: "subjectId",
+        select: "subjectCode subjectName units"
+      });
+
+    console.log(`\nTotal schedules generated: ${schedules.length}`);
+    console.log('Schedules by section:', 
+      sections.map(s => ({
+        name: s.name,
+        course: s.courseId.course,
+        year: s.yearId.name,
+        schedules: schedules.filter(sch => sch.sectionId._id.toString() === s._id.toString()).length
+      }))
+    );
+
+    // Calculate success rate
+    const successRate = schedulingReport.totalSubjects > 0 
+      ? (schedulingReport.subjectsScheduled / schedulingReport.totalSubjects) * 100
+      : 0;
+    
+    // Return response with all necessary data
+    res.json({
+      message: successRate === 100 
+        ? "All subjects scheduled successfully" 
+        : `Scheduled ${schedulingReport.subjectsScheduled} out of ${schedulingReport.totalSubjects} subjects (${successRate.toFixed(1)}%)`,
+      report: schedulingReport,
+      schedules: schedules,
+      success: true
     });
 
   } catch (error) {
-    console.error("❌ Schedule generation error:", error);
-    res.status(500).json({
-      message: "Failed to generate schedules",
+    console.error("Error generating schedules:", error);
+    res.status(500).json({ 
+      message: "Error generating schedules",
       error: error.message,
+      success: false
     });
   }
-});
+};
 
 // Get all schedules
 const getSchedules = asyncHandler(async (req, res) => {

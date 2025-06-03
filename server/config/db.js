@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 const dotenv = require("dotenv");
 const User = require("../models/Users");
+const Schedule = require("../models/Schedule");
 
 dotenv.config();
 
@@ -27,6 +28,26 @@ const createSuperAdmin = async () => {
   }
 };
 
+// Drop and recreate indexes
+const recreateIndexes = async () => {
+  try {
+    // Drop all indexes from the schedules collection
+    await Schedule.collection.dropIndexes();
+    console.log("✅ Dropped all indexes from schedules collection");
+
+    // Recreate the indexes
+    await Schedule.collection.createIndex({ sectionId: 1, semester: 1, academicYear: 1 });
+    await Schedule.collection.createIndex({ subjectId: 1, semester: 1 });
+    await Schedule.collection.createIndex(
+      { sectionId: 1, day: 1, startTime: 1, endTime: 1, semester: 1 },
+      { unique: true }
+    );
+    console.log("✅ Recreated indexes for schedules collection");
+  } catch (error) {
+    console.error("❌ Error recreating indexes:", error);
+  }
+};
+
 // Connect to MongoDB
 const connectDB = async () => {
   try {
@@ -37,6 +58,7 @@ const connectDB = async () => {
     console.log("✅ Connected to MongoDB");
 
     await createSuperAdmin();
+    await recreateIndexes();
   } catch (error) {
     console.error("❌ Database connection error:", error);
   }

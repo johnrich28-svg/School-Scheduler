@@ -46,7 +46,8 @@ const scheduleSchema = new mongoose.Schema(
 // Add optimized compound index for faster queries
 scheduleSchema.index({ sectionId: 1, semester: 1, academicYear: 1 });
 scheduleSchema.index({ subjectId: 1, semester: 1 });
-scheduleSchema.index({ day: 1, startTime: 1, endTime: 1 });
+// Update the time slot index to include semester in the unique constraint
+scheduleSchema.index({ sectionId: 1, day: 1, startTime: 1, endTime: 1, semester: 1 }, { unique: true });
 
 const Schedule = mongoose.models.Schedule || mongoose.model("Schedule", scheduleSchema);
 

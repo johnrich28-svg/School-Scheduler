@@ -270,7 +270,7 @@ const Admin = () => {
     return Object.keys(errors).length === 0;
   };
 
-  // Add validation for schedule
+  // Update the validateSchedule function
   const validateSchedule = () => {
     const errors = {};
     if (!newSchedule.sectionId) errors.sectionId = "Section is required";
@@ -721,6 +721,37 @@ const Admin = () => {
         "Content-Type": "application/json",
       };
 
+      // Check for conflicts only within the same semester
+      const hasConflict = schedules.some(schedule => {
+        // Skip if different semester
+        if (schedule.semester !== newSchedule.semester) return false;
+        
+        // Skip if different section
+        const scheduleSectionId = typeof schedule.sectionId === 'object' ? schedule.sectionId._id : schedule.sectionId;
+        if (scheduleSectionId !== newSchedule.sectionId) return false;
+        
+        // Skip if different day
+        if (schedule.day !== newSchedule.day) return false;
+        
+        // Check time overlap
+        const existingStart = new Date(`2000-01-01T${schedule.startTime}`);
+        const existingEnd = new Date(`2000-01-01T${schedule.endTime}`);
+        const newStart = new Date(`2000-01-01T${newSchedule.startTime}`);
+        const newEnd = new Date(`2000-01-01T${newSchedule.endTime}`);
+        
+        return (
+          (newStart >= existingStart && newStart < existingEnd) ||
+          (newEnd > existingStart && newEnd <= existingEnd) ||
+          (newStart <= existingStart && newEnd >= existingEnd)
+        );
+      });
+
+      if (hasConflict) {
+        setError("This time slot conflicts with an existing schedule in the same semester");
+        setLoading(false);
+        return;
+      }
+
       const response = await axios.post(
         `${API_BASE_URL}/api/auth/admin/schedule`,
         newSchedule,
@@ -756,7 +787,7 @@ const Admin = () => {
     }
   };
 
-  // Add handler for schedule deletion
+  // Update the handleDeleteSchedule function
   const handleDeleteSchedule = async (id) => {
     if (!window.confirm("Are you sure you want to delete this schedule?")) return;
 
@@ -769,7 +800,7 @@ const Admin = () => {
       };
 
       const response = await axios.delete(
-        `${API_BASE_URL}/api/admin/schedule/${id}`,
+        `${API_BASE_URL}/api/auth/admin/schedule/${id}`,
         { headers }
       );
 
@@ -1641,23 +1672,8 @@ const Admin = () => {
               </div>
 
               <div className="scheduler-controls">
-                <div className="semester-selector">
-                  <label>Semester:</label>
-                  <select
-                    value={selectedSemester}
-                    onChange={(e) => {
-                      setSelectedSemester(e.target.value);
-                      setNewSchedule(prev => ({ ...prev, semester: e.target.value }));
-                    }}
-                    className="form-select"
-                  >
-                    <option value="1st">1st Semester</option>
-                    <option value="2nd">2nd Semester</option>
-                  </select>
-                </div>
-                
                 <div className="section-selector">
-                  <label>Section:</label>
+                  <label>Select Section:</label>
                   <select
                     value={selectedSection}
                     onChange={(e) => {
@@ -1666,7 +1682,7 @@ const Admin = () => {
                     }}
                     className="form-select"
                   >
-                    <option value="">All Sections</option>
+                    <option value="">Select Section to View Schedule</option>
                     {sections.map((section) => (
                       <option key={section._id} value={section._id}>
                         {section.name}
@@ -1822,24 +1838,29 @@ const Admin = () => {
               <div className="schedule-list">
                 <h3>Current Schedules</h3>
                 
-                <div className="schedule-view-controls">
-                  <div className="view-selector">
-                    <select
-                      value={selectedSection}
-                      onChange={(e) => setSelectedSection(e.target.value)}
-                      className="section-select"
-                    >
-                      <option value="">Select Section to View Schedule</option>
-                      {sections.map((section) => (
-                        <option key={section._id} value={section._id}>
-                          {section.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
                 {selectedSection ? (
+                  <div className="semester-tabs">
+                    <button
+                      className={`semester-tab ${selectedSemester === "1st" ? "active" : ""}`}
+                      onClick={() => setSelectedSemester("1st")}
+                    >
+                      1st Semester
+                    </button>
+                    <button
+                      className={`semester-tab ${selectedSemester === "2nd" ? "active" : ""}`}
+                      onClick={() => setSelectedSemester("2nd")}
+                    >
+                      2nd Semester
+                    </button>
+                  </div>
+                ) : (
+                  <div className="schedule-empty-state">
+                    <div className="empty-icon">📅</div>
+                    <p>Please select a section to view its schedule</p>
+                  </div>
+                )}
+
+                {selectedSection && (
                   <div className="schedule-table-container">
                     <table className="schedule-table">
                       <thead>
@@ -1890,11 +1911,6 @@ const Admin = () => {
                         ))}
                       </tbody>
                     </table>
-                  </div>
-                ) : (
-                  <div className="schedule-empty-state">
-                    <div className="empty-icon">📅</div>
-                    <p>Please select a section to view its schedule</p>
                   </div>
                 )}
               </div>

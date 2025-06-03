@@ -458,27 +458,35 @@ const createManualSchedule = asyncHandler(async (req, res) => {
   if (conflicts.length > 0) {
     return res.status(400).json({
       success: false,
-      message: "Schedule conflict detected",
+      message: "Schedule conflict detected for the same semester",
       conflicts
     });
   }
 
-  // Create schedule
-  const schedule = await Schedule.create({
-    sectionId,
-    subjectId,
-    day,
-    startTime,
-    endTime,
-    semester,
-    academicYear
-  });
+  try {
+    // Create schedule
+    const schedule = await Schedule.create({
+      sectionId,
+      subjectId,
+      day,
+      startTime,
+      endTime,
+      semester,
+      academicYear
+    });
 
-  res.status(201).json({
-    success: true,
-    message: "Schedule created successfully",
-    schedule
-  });
+    res.status(201).json({
+      success: true,
+      message: "Schedule created successfully",
+      schedule
+    });
+  } catch (error) {
+    console.error("Error creating schedule:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Failed to create schedule"
+    });
+  }
 });
 
 const updateSchedule = asyncHandler(async (req, res) => {

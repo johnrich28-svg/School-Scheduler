@@ -11,12 +11,24 @@ const subjectSchema = new mongoose.Schema({
     enum: ["1st", "2nd"],
     required: true,
   },
-  day: {
-    type: String,
-    enum: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
-    required: true,
-  },
+  // ❌ REMOVE THIS - day should be flexible, determined during scheduling
+  // day: {
+  //   type: String,
+  //   enum: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
+  //   required: true,
+  // },
   units: Number,
+  // ✅ ADD: Optional constraints if needed
+  preferredDays: [{
+    type: String,
+    enum: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+  }], // Optional: if subject has preferred days but not locked to one
+  hoursPerWeek: {
+    type: Number,
+    default: function() {
+      return this.units || 3; // Default based on units
+    }
+  }
 });
 
 module.exports = mongoose.model("Subject", subjectSchema);

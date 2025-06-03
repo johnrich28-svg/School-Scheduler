@@ -30,6 +30,9 @@ const scheduleSchema = new mongoose.Schema(
       required: true,
       enum: ["1st", "2nd"],
     },
+    academicYear: {
+      type: String,
+    },
     isActive: {
       type: Boolean,
       default: true,
@@ -40,10 +43,11 @@ const scheduleSchema = new mongoose.Schema(
   }
 );
 
-// Remove the compound index that might be causing conflicts
-// Instead, we'll handle conflicts in the application logic
+// Add optimized compound index for faster queries
+scheduleSchema.index({ sectionId: 1, semester: 1, academicYear: 1 });
+scheduleSchema.index({ subjectId: 1, semester: 1 });
+scheduleSchema.index({ day: 1, startTime: 1, endTime: 1 });
 
-// ✅ Prevent model overwrite on hot reload
 const Schedule = mongoose.models.Schedule || mongoose.model("Schedule", scheduleSchema);
 
 module.exports = Schedule;

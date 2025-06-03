@@ -4,6 +4,19 @@ import "../styles/admin.css";
 
 const API_BASE_URL = "http://localhost:5000";
 
+const Modal = ({ isOpen, onClose, children }) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="modal-overlay">
+      <div className="modal-content">
+        <button className="modal-close" onClick={onClose}>×</button>
+        {children}
+      </div>
+    </div>
+  );
+};
+
 const Admin = () => {
   // State for different sections
   const [activeTab, setActiveTab] = useState("users");
@@ -72,6 +85,10 @@ const Admin = () => {
     academicYear: new Date().getFullYear().toString()
   });
   const [scheduleErrors, setScheduleErrors] = useState({});
+
+  // Add new state for editing schedule
+  const [editingSchedule, setEditingSchedule] = useState(null);
+  const [isEditingSchedule, setIsEditingSchedule] = useState(false);
 
   // Reset form states
   const resetFormStates = () => {
@@ -881,6 +898,86 @@ const Admin = () => {
     return table;
   };
 
+  // Add function to handle schedule edit
+  const handleEditSchedule = (schedule) => {
+    setEditingSchedule(schedule);
+    setIsEditingSchedule(true);
+    setNewSchedule({
+      sectionId: schedule.sectionId._id,
+      subjectId: schedule.subjectId._id,
+      day: schedule.day,
+      startTime: schedule.startTime,
+      endTime: schedule.endTime,
+      semester: schedule.semester,
+      academicYear: schedule.academicYear
+    });
+  };
+
+  // Add function to handle schedule update
+  const handleUpdateSchedule = async (e) => {
+    e.preventDefault();
+    if (!validateSchedule()) return;
+
+    try {
+      setLoading(true);
+      const token = localStorage.getItem("authToken");
+      const headers = {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      };
+
+      const response = await axios.put(
+        `${API_BASE_URL}/api/auth/admin/schedule/${editingSchedule._id}`,
+        newSchedule,
+        { headers }
+      );
+
+      if (response.data.success) {
+        setSuccess("Schedule updated successfully");
+        // Refresh schedules
+        const schedulesRes = await axios.get(
+          `${API_BASE_URL}/api/auth/admin/get-schedules`,
+          { headers }
+        );
+        setSchedules(Array.isArray(schedulesRes.data) ? schedulesRes.data : []);
+        // Reset form and editing state
+        setNewSchedule({
+          sectionId: "",
+          subjectId: "",
+          day: "",
+          startTime: "",
+          endTime: "",
+          semester: "1st",
+          academicYear: new Date().getFullYear().toString()
+        });
+        setEditingSchedule(null);
+        setIsEditingSchedule(false);
+      } else {
+        setError(response.data.message || "Failed to update schedule");
+      }
+    } catch (error) {
+      console.error("Error updating schedule:", error);
+      setError(error.response?.data?.message || "Failed to update schedule");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Add function to cancel schedule edit
+  const handleCancelScheduleEdit = () => {
+    setEditingSchedule(null);
+    setIsEditingSchedule(false);
+    setNewSchedule({
+      sectionId: "",
+      subjectId: "",
+      day: "",
+      startTime: "",
+      endTime: "",
+      semester: "1st",
+      academicYear: new Date().getFullYear().toString()
+    });
+  };
+
   // Clear success message after 3 seconds
   useEffect(() => {
     if (success) {
@@ -1552,6 +1649,7 @@ const Admin = () => {
                       setSelectedSemester(e.target.value);
                       setNewSchedule(prev => ({ ...prev, semester: e.target.value }));
                     }}
+                    className="form-select"
                   >
                     <option value="1st">1st Semester</option>
                     <option value="2nd">2nd Semester</option>
@@ -1566,6 +1664,7 @@ const Admin = () => {
                       setSelectedSection(e.target.value);
                       setNewSchedule(prev => ({ ...prev, sectionId: e.target.value }));
                     }}
+                    className="form-select"
                   >
                     <option value="">All Sections</option>
                     {sections.map((section) => (
@@ -1580,120 +1679,143 @@ const Admin = () => {
               <div className="schedule-form">
                 <h3>Create New Schedule</h3>
                 <form onSubmit={handleScheduleSubmit}>
-                  <div className="form-group">
-                    <label>Section:</label>
-                    <select
-                      value={newSchedule.sectionId}
-                      onChange={(e) =>
-                        setNewSchedule({ ...newSchedule, sectionId: e.target.value })
-                      }
-                      required
-                    >
-                      <option value="">Select Section</option>
-                      {sections.map((section) => (
-                        <option key={section._id} value={section._id}>
-                          {section.name}
-                        </option>
-                      ))}
-                    </select>
-                    {scheduleErrors.sectionId && (
-                      <span className="error">{scheduleErrors.sectionId}</span>
-                    )}
+                  <div className="form-grid form-grid-2">
+                    <div className="form-group">
+                      <label>Section:</label>
+                      <select
+                        value={newSchedule.sectionId}
+                        onChange={(e) =>
+                          setNewSchedule({ ...newSchedule, sectionId: e.target.value })
+                        }
+                        required
+                        className={scheduleErrors.sectionId ? "error" : ""}
+                      >
+                        <option value="">Select Section</option>
+                        {sections.map((section) => (
+                          <option key={section._id} value={section._id}>
+                            {section.name}
+                          </option>
+                        ))}
+                      </select>
+                      {scheduleErrors.sectionId && (
+                        <span className="error">{scheduleErrors.sectionId}</span>
+                      )}
+                    </div>
+
+                    <div className="form-group">
+                      <label>Subject:</label>
+                      <select
+                        value={newSchedule.subjectId}
+                        onChange={(e) =>
+                          setNewSchedule({ ...newSchedule, subjectId: e.target.value })
+                        }
+                        required
+                        className={scheduleErrors.subjectId ? "error" : ""}
+                      >
+                        <option value="">Select Subject</option>
+                        {getFilteredSubjects(newSchedule.sectionId, newSchedule.semester).map((subject) => (
+                          <option key={subject._id} value={subject._id}>
+                            {subject.subjectCode} - {subject.subjectName}
+                          </option>
+                        ))}
+                      </select>
+                      {scheduleErrors.subjectId && (
+                        <span className="error">{scheduleErrors.subjectId}</span>
+                      )}
+                    </div>
+
+                    <div className="form-group">
+                      <label>Day:</label>
+                      <select
+                        value={newSchedule.day}
+                        onChange={(e) =>
+                          setNewSchedule({ ...newSchedule, day: e.target.value })
+                        }
+                        required
+                        className={scheduleErrors.day ? "error" : ""}
+                      >
+                        <option value="">Select Day</option>
+                        <option value="Monday">Monday</option>
+                        <option value="Tuesday">Tuesday</option>
+                        <option value="Wednesday">Wednesday</option>
+                        <option value="Thursday">Thursday</option>
+                        <option value="Friday">Friday</option>
+                        <option value="Saturday">Saturday</option>
+                      </select>
+                      {scheduleErrors.day && (
+                        <span className="error">{scheduleErrors.day}</span>
+                      )}
+                    </div>
+
+                    <div className="form-group">
+                      <label>Time Range:</label>
+                      <div className="time-range-inputs">
+                        <input
+                          type="time"
+                          value={newSchedule.startTime}
+                          onChange={(e) =>
+                            setNewSchedule({ ...newSchedule, startTime: e.target.value })
+                          }
+                          required
+                          className={scheduleErrors.startTime ? "error" : ""}
+                        />
+                        <span>to</span>
+                        <input
+                          type="time"
+                          value={newSchedule.endTime}
+                          onChange={(e) =>
+                            setNewSchedule({ ...newSchedule, endTime: e.target.value })
+                          }
+                          required
+                          className={scheduleErrors.endTime ? "error" : ""}
+                        />
+                      </div>
+                      {(scheduleErrors.startTime || scheduleErrors.endTime) && (
+                        <span className="error">{scheduleErrors.startTime || scheduleErrors.endTime}</span>
+                      )}
+                    </div>
+
+                    <div className="form-group">
+                      <label>Semester:</label>
+                      <select
+                        value={newSchedule.semester}
+                        onChange={(e) =>
+                          setNewSchedule({ ...newSchedule, semester: e.target.value })
+                        }
+                        required
+                        className={scheduleErrors.semester ? "error" : ""}
+                      >
+                        <option value="1st">1st Semester</option>
+                        <option value="2nd">2nd Semester</option>
+                      </select>
+                      {scheduleErrors.semester && (
+                        <span className="error">{scheduleErrors.semester}</span>
+                      )}
+                    </div>
+
+                    <div className="form-group">
+                      <label>Academic Year:</label>
+                      <input
+                        type="text"
+                        value={newSchedule.academicYear}
+                        onChange={(e) =>
+                          setNewSchedule({ ...newSchedule, academicYear: e.target.value })
+                        }
+                        required
+                        placeholder="e.g., 2023-2024"
+                        className={scheduleErrors.academicYear ? "error" : ""}
+                      />
+                      {scheduleErrors.academicYear && (
+                        <span className="error">{scheduleErrors.academicYear}</span>
+                      )}
+                    </div>
                   </div>
 
-                  <div className="form-group">
-                    <label>Subject:</label>
-                    <select
-                      value={newSchedule.subjectId}
-                      onChange={(e) =>
-                        setNewSchedule({ ...newSchedule, subjectId: e.target.value })
-                      }
-                      required
-                    >
-                      <option value="">Select Subject</option>
-                      {getFilteredSubjects(newSchedule.sectionId, newSchedule.semester).map((subject) => (
-                        <option key={subject._id} value={subject._id}>
-                          {subject.subjectCode} - {subject.subjectName}
-                        </option>
-                      ))}
-                    </select>
-                    {scheduleErrors.subjectId && (
-                      <span className="error">{scheduleErrors.subjectId}</span>
-                    )}
+                  <div className="form-actions">
+                    <button type="submit" className="btn-primary" disabled={loading}>
+                      {loading ? "Creating..." : "Create Schedule"}
+                    </button>
                   </div>
-
-                  <div className="form-group">
-                    <label>Day:</label>
-                    <select
-                      value={newSchedule.day}
-                      onChange={(e) =>
-                        setNewSchedule({ ...newSchedule, day: e.target.value })
-                      }
-                      required
-                    >
-                      <option value="">Select Day</option>
-                      <option value="Monday">Monday</option>
-                      <option value="Tuesday">Tuesday</option>
-                      <option value="Wednesday">Wednesday</option>
-                      <option value="Thursday">Thursday</option>
-                      <option value="Friday">Friday</option>
-                      <option value="Saturday">Saturday</option>
-                    </select>
-                    {scheduleErrors.day && (
-                      <span className="error">{scheduleErrors.day}</span>
-                    )}
-                  </div>
-
-                  <div className="form-group">
-                    <label>Start Time:</label>
-                    <input
-                      type="time"
-                      value={newSchedule.startTime}
-                      onChange={(e) =>
-                        setNewSchedule({ ...newSchedule, startTime: e.target.value })
-                      }
-                      required
-                    />
-                    {scheduleErrors.startTime && (
-                      <span className="error">{scheduleErrors.startTime}</span>
-                    )}
-                  </div>
-
-                  <div className="form-group">
-                    <label>End Time:</label>
-                    <input
-                      type="time"
-                      value={newSchedule.endTime}
-                      onChange={(e) =>
-                        setNewSchedule({ ...newSchedule, endTime: e.target.value })
-                      }
-                      required
-                    />
-                    {scheduleErrors.endTime && (
-                      <span className="error">{scheduleErrors.endTime}</span>
-                    )}
-                  </div>
-
-                  <div className="form-group">
-                    <label>Semester:</label>
-                    <select
-                      value={newSchedule.semester}
-                      onChange={(e) =>
-                        setNewSchedule({ ...newSchedule, semester: e.target.value })
-                      }
-                      required
-                    >
-                      <option value="1st">1st Semester</option>
-                      <option value="2nd">2nd Semester</option>
-                    </select>
-                    {scheduleErrors.semester && (
-                      <span className="error">{scheduleErrors.semester}</span>
-                    )}
-                  </div>
-
-                  <button type="submit" className="btn-primary" disabled={loading}>
-                    {loading ? "Creating..." : "Create Schedule"}
-                  </button>
                 </form>
               </div>
 
@@ -1736,6 +1858,20 @@ const Admin = () => {
                               <td key={`${day.day}-${time}`} className="schedule-cell">
                                 {day.schedules[['07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00'].indexOf(time)] ? (
                                   <div className="schedule-item">
+                                    <div className="schedule-actions">
+                                      <button
+                                        className="btn-edit-schedule"
+                                        onClick={() => handleEditSchedule(day.schedules[['07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00'].indexOf(time)])}
+                                      >
+                                        ✎
+                                      </button>
+                                      <button
+                                        className="btn-delete-schedule"
+                                        onClick={() => handleDeleteSchedule(day.schedules[['07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00'].indexOf(time)]._id)}
+                                      >
+                                        ×
+                                      </button>
+                                    </div>
                                     <div className="schedule-subject">
                                       {day.schedules[['07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00'].indexOf(time)].subjectId.subjectCode}
                                     </div>
@@ -1746,12 +1882,6 @@ const Admin = () => {
                                       {day.schedules[['07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00'].indexOf(time)].startTime} - 
                                       {day.schedules[['07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00'].indexOf(time)].endTime}
                                     </div>
-                                    <button
-                                      className="btn-delete-schedule"
-                                      onClick={() => handleDeleteSchedule(day.schedules[['07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00'].indexOf(time)]._id)}
-                                    >
-                                      ×
-                                    </button>
                                   </div>
                                 ) : null}
                               </td>
@@ -1762,34 +1892,165 @@ const Admin = () => {
                     </table>
                   </div>
                 ) : (
-                  <div className="schedule-grid">
-                    {schedules
-                      .filter(
-                        (schedule) =>
-                          (!selectedSection || schedule.sectionId._id === selectedSection) &&
-                          schedule.semester === selectedSemester
-                      )
-                      .map((schedule) => (
-                        <div key={schedule._id} className="schedule-card">
-                          <div className="schedule-header">
-                            <h4>{schedule.subjectId.subjectCode}</h4>
-                            <button
-                              className="btn-delete"
-                              onClick={() => handleDeleteSchedule(schedule._id)}
-                            >
-                              Delete
-                            </button>
-                          </div>
-                          <p className="schedule-subject">{schedule.subjectId.subjectName}</p>
-                          <p className="schedule-section">Section: {schedule.sectionId.name}</p>
-                          <p className="schedule-time">
-                            {schedule.day} {schedule.startTime} - {schedule.endTime}
-                          </p>
-                        </div>
-                      ))}
+                  <div className="schedule-empty-state">
+                    <div className="empty-icon">📅</div>
+                    <p>Please select a section to view its schedule</p>
                   </div>
                 )}
               </div>
+
+              {/* Add the Modal component */}
+              <Modal isOpen={isEditingSchedule} onClose={handleCancelScheduleEdit}>
+                <div className="modal-form">
+                  <h3>Edit Schedule</h3>
+                  <form onSubmit={handleUpdateSchedule}>
+                    <div className="form-grid form-grid-2">
+                      <div className="form-group">
+                        <label>Section:</label>
+                        <select
+                          value={newSchedule.sectionId}
+                          onChange={(e) =>
+                            setNewSchedule({ ...newSchedule, sectionId: e.target.value })
+                          }
+                          required
+                          className={scheduleErrors.sectionId ? "error" : ""}
+                        >
+                          <option value="">Select Section</option>
+                          {sections.map((section) => (
+                            <option key={section._id} value={section._id}>
+                              {section.name}
+                            </option>
+                          ))}
+                        </select>
+                        {scheduleErrors.sectionId && (
+                          <span className="error">{scheduleErrors.sectionId}</span>
+                        )}
+                      </div>
+
+                      <div className="form-group">
+                        <label>Subject:</label>
+                        <select
+                          value={newSchedule.subjectId}
+                          onChange={(e) =>
+                            setNewSchedule({ ...newSchedule, subjectId: e.target.value })
+                          }
+                          required
+                          className={scheduleErrors.subjectId ? "error" : ""}
+                        >
+                          <option value="">Select Subject</option>
+                          {getFilteredSubjects(newSchedule.sectionId, newSchedule.semester).map((subject) => (
+                            <option key={subject._id} value={subject._id}>
+                              {subject.subjectCode} - {subject.subjectName}
+                            </option>
+                          ))}
+                        </select>
+                        {scheduleErrors.subjectId && (
+                          <span className="error">{scheduleErrors.subjectId}</span>
+                        )}
+                      </div>
+
+                      <div className="form-group">
+                        <label>Day:</label>
+                        <select
+                          value={newSchedule.day}
+                          onChange={(e) =>
+                            setNewSchedule({ ...newSchedule, day: e.target.value })
+                          }
+                          required
+                          className={scheduleErrors.day ? "error" : ""}
+                        >
+                          <option value="">Select Day</option>
+                          <option value="Monday">Monday</option>
+                          <option value="Tuesday">Tuesday</option>
+                          <option value="Wednesday">Wednesday</option>
+                          <option value="Thursday">Thursday</option>
+                          <option value="Friday">Friday</option>
+                          <option value="Saturday">Saturday</option>
+                        </select>
+                        {scheduleErrors.day && (
+                          <span className="error">{scheduleErrors.day}</span>
+                        )}
+                      </div>
+
+                      <div className="form-group">
+                        <label>Time Range:</label>
+                        <div className="time-range-inputs">
+                          <input
+                            type="time"
+                            value={newSchedule.startTime}
+                            onChange={(e) =>
+                              setNewSchedule({ ...newSchedule, startTime: e.target.value })
+                            }
+                            required
+                            className={scheduleErrors.startTime ? "error" : ""}
+                          />
+                          <span>to</span>
+                          <input
+                            type="time"
+                            value={newSchedule.endTime}
+                            onChange={(e) =>
+                              setNewSchedule({ ...newSchedule, endTime: e.target.value })
+                            }
+                            required
+                            className={scheduleErrors.endTime ? "error" : ""}
+                          />
+                        </div>
+                        {(scheduleErrors.startTime || scheduleErrors.endTime) && (
+                          <span className="error">{scheduleErrors.startTime || scheduleErrors.endTime}</span>
+                        )}
+                      </div>
+
+                      <div className="form-group">
+                        <label>Semester:</label>
+                        <select
+                          value={newSchedule.semester}
+                          onChange={(e) =>
+                            setNewSchedule({ ...newSchedule, semester: e.target.value })
+                          }
+                          required
+                          className={scheduleErrors.semester ? "error" : ""}
+                        >
+                          <option value="1st">1st Semester</option>
+                          <option value="2nd">2nd Semester</option>
+                        </select>
+                        {scheduleErrors.semester && (
+                          <span className="error">{scheduleErrors.semester}</span>
+                        )}
+                      </div>
+
+                      <div className="form-group">
+                        <label>Academic Year:</label>
+                        <input
+                          type="text"
+                          value={newSchedule.academicYear}
+                          onChange={(e) =>
+                            setNewSchedule({ ...newSchedule, academicYear: e.target.value })
+                          }
+                          required
+                          placeholder="e.g., 2023-2024"
+                          className={scheduleErrors.academicYear ? "error" : ""}
+                        />
+                        {scheduleErrors.academicYear && (
+                          <span className="error">{scheduleErrors.academicYear}</span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="form-actions">
+                      <button type="submit" className="btn-primary" disabled={loading}>
+                        {loading ? "Updating..." : "Update Schedule"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleCancelScheduleEdit}
+                        className="btn-secondary"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </Modal>
             </div>
           )}
         </div>

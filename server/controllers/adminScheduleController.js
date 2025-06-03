@@ -416,6 +416,145 @@ const getScheduleVisualization = async (req, res) => {
   }
 };
 
+// Manual Schedule Management
+const createManualSchedule = asyncHandler(async (req, res) => {
+  const { sectionId, subjectId, day, startTime, endTime, semester, academicYear } = req.body;
+
+  // Validate required fields
+  if (!sectionId || !subjectId || !day || !startTime || !endTime || !semester) {
+    return res.status(400).json({
+      success: false,
+      message: "Missing required fields"
+    });
+  }
+
+  // Check if section and subject exist
+  const [section, subject] = await Promise.all([
+    Section.findById(sectionId),
+    Subject.findById(subjectId)
+  ]);
+
+  if (!section || !subject) {
+    return res.status(404).json({
+      success: false,
+      message: "Section or subject not found"
+    });
+  }
+
+  // Check for conflicts
+  const conflicts = await Schedule.find({
+    sectionId,
+    day,
+    semester,
+    academicYear,
+    $or: [
+      {
+        startTime: { $lt: endTime },
+        endTime: { $gt: startTime }
+      }
+    ]
+  });
+
+  if (conflicts.length > 0) {
+    return res.status(400).json({
+      success: false,
+      message: "Schedule conflict detected",
+      conflicts
+    });
+  }
+
+  // Create schedule
+  const schedule = await Schedule.create({
+    sectionId,
+    subjectId,
+    day,
+    startTime,
+    endTime,
+    semester,
+    academicYear
+  });
+
+  res.status(201).json({
+    success: true,
+    message: "Schedule created successfully",
+    schedule
+  });
+});
+
+const updateSchedule = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { day, startTime, endTime } = req.body;
+
+  // Validate required fields
+  if (!day || !startTime || !endTime) {
+    return res.status(400).json({
+      success: false,
+      message: "Missing required fields"
+    });
+  }
+
+  // Get existing schedule
+  const schedule = await Schedule.findById(id);
+  if (!schedule) {
+    return res.status(404).json({
+      success: false,
+      message: "Schedule not found"
+    });
+  }
+
+  // Check for conflicts excluding current schedule
+  const conflicts = await Schedule.find({
+    sectionId: schedule.sectionId,
+    day,
+    semester: schedule.semester,
+    academicYear: schedule.academicYear,
+    _id: { $ne: id },
+    $or: [
+      {
+        startTime: { $lt: endTime },
+        endTime: { $gt: startTime }
+      }
+    ]
+  });
+
+  if (conflicts.length > 0) {
+    return res.status(400).json({
+      success: false,
+      message: "Schedule conflict detected",
+      conflicts
+    });
+  }
+
+  // Update schedule
+  schedule.day = day;
+  schedule.startTime = startTime;
+  schedule.endTime = endTime;
+  await schedule.save();
+
+  res.json({
+    success: true,
+    message: "Schedule updated successfully",
+    schedule
+  });
+});
+
+const deleteSchedule = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  const schedule = await Schedule.findByIdAndDelete(id);
+  if (!schedule) {
+    return res.status(404).json({
+      success: false,
+      message: "Schedule not found"
+    });
+  }
+
+  res.json({
+    success: true,
+    message: "Schedule deleted successfully"
+  });
+});
+
 module.exports = {
   generateSchedules,
   generateBulkSchedules,
@@ -424,5 +563,8 @@ module.exports = {
   getSchedulesBySemester,
   deleteAllSchedules,
   getSchedulingAnalytics,
-  getScheduleVisualization
+  getScheduleVisualization,
+  createManualSchedule,
+  updateSchedule,
+  deleteSchedule
 };

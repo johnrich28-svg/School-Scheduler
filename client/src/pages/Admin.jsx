@@ -61,6 +61,18 @@ const Admin = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [editId, setEditId] = useState(null);
 
+  // Add new state for manual scheduling
+  const [newSchedule, setNewSchedule] = useState({
+    sectionId: "",
+    subjectId: "",
+    day: "",
+    startTime: "",
+    endTime: "",
+    semester: "1st",
+    academicYear: new Date().getFullYear().toString()
+  });
+  const [scheduleErrors, setScheduleErrors] = useState({});
+
   // Reset form states
   const resetFormStates = () => {
     setNewUser({ username: "", email: "", password: "", role: "professor" });
@@ -77,6 +89,15 @@ const Admin = () => {
     });
     setIsEditing(false);
     setEditId(null);
+    setNewSchedule({
+      sectionId: "",
+      subjectId: "",
+      day: "",
+      startTime: "",
+      endTime: "",
+      semester: "1st",
+      academicYear: new Date().getFullYear().toString()
+    });
   };
 
   // Fetch data based on active tab
@@ -123,7 +144,7 @@ const Admin = () => {
                 `${API_BASE_URL}/api/auth/admin/get-sections`,
                 { headers }
               );
-              console.log("Sections response:", sectionsRes.data); // Debug log
+              console.log("Sections response:", sectionsRes.data);
               if (Array.isArray(sectionsRes.data)) {
                 setSections(sectionsRes.data);
               } else {
@@ -145,14 +166,6 @@ const Admin = () => {
               { headers }
             );
             setSubjects(Array.isArray(subjectsRes.data) ? subjectsRes.data : []);
-            break;
-          case "rooms":
-            const roomsRes = await axios.post(
-              `${API_BASE_URL}/api/admin/rooms/get-room`,
-              {},
-              { headers }
-            );
-            setRooms(Array.isArray(roomsRes.data) ? roomsRes.data : []);
             break;
           case "scheduler":
             const schedulesRes = await axios.get(
@@ -237,6 +250,29 @@ const Admin = () => {
     const errors = {};
     if (!newRoom.room) errors.room = "Room name is required";
     setRoomErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  // Add validation for schedule
+  const validateSchedule = () => {
+    const errors = {};
+    if (!newSchedule.sectionId) errors.sectionId = "Section is required";
+    if (!newSchedule.subjectId) errors.subjectId = "Subject is required";
+    if (!newSchedule.day) errors.day = "Day is required";
+    if (!newSchedule.startTime) errors.startTime = "Start time is required";
+    if (!newSchedule.endTime) errors.endTime = "End time is required";
+    if (!newSchedule.semester) errors.semester = "Semester is required";
+    
+    // Validate time format and logic
+    if (newSchedule.startTime && newSchedule.endTime) {
+      const start = new Date(`2000-01-01T${newSchedule.startTime}`);
+      const end = new Date(`2000-01-01T${newSchedule.endTime}`);
+      if (start >= end) {
+        errors.endTime = "End time must be after start time";
+      }
+    }
+    
+    setScheduleErrors(errors);
     return Object.keys(errors).length === 0;
   };
 
@@ -417,9 +453,6 @@ const Admin = () => {
           units: item.units,
           day: item.day,
         });
-        break;
-      case "rooms":
-        setNewRoom({ room: item.room });
         break;
     }
   };
@@ -658,137 +691,121 @@ const Admin = () => {
     }
   };
 
-  const handleRoomSubmit = async (e) => {
+  // Update the handleScheduleSubmit function
+  const handleScheduleSubmit = async (e) => {
     e.preventDefault();
-    if (!validateRoom()) return;
+    if (!validateSchedule()) return;
 
     try {
       setLoading(true);
       const token = localStorage.getItem("authToken");
-      if (!token) {
-        setError("No authentication token found. Please log in again.");
-        return;
-      }
-
       const headers = {
         Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
-      };
-
-      if (isEditing) {
-        await axios.put(
-          `${API_BASE_URL}/api/admin/rooms/update-room/${editId}`,
-          newRoom,
-          { headers }
-        );
-        setSuccess("Room updated successfully");
-      } else {
-        await axios.post(
-          `${API_BASE_URL}/api/admin/rooms/create-room`,
-          newRoom,
-          { headers }
-        );
-        setSuccess("Room created successfully");
-      }
-
-      resetFormStates();
-
-      // Refresh rooms list
-      const roomsRes = await axios.post(
-        `${API_BASE_URL}/api/admin/rooms/get-room`,
-        {},
-        { headers }
-      );
-      setRooms(Array.isArray(roomsRes.data) ? roomsRes.data : []);
-    } catch (error) {
-      console.error("Error saving room:", error);
-      if (error.response) {
-        setError(
-          `Failed to save room: ${
-            error.response.data.message || "Please try again."
-          }`
-        );
-      } else {
-        setError("Failed to save room. Please try again.");
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Add this function to handle schedule generation
-  const handleGenerateSchedules = async () => {
-    try {
-      setLoading(true);
-      const token = localStorage.getItem("authToken");
-      if (!token) {
-        setError("No authentication token found. Please log in again.");
-        return;
-      }
-
-      const headers = {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      };
-
-      // Include both section and semester in the request
-      const requestBody = {
-        sectionId: selectedSection || undefined,
-        semester: selectedSemester
       };
 
       const response = await axios.post(
-        `${API_BASE_URL}/api/auth/admin/generate-schedules`,
-        requestBody,
+        `${API_BASE_URL}/api/auth/admin/schedule`,
+        newSchedule,
         { headers }
       );
 
-      // Check if schedules were actually generated
-      if (response.data.schedules && response.data.schedules.length > 0) {
-        setSuccess(response.data.message || "Schedules generated successfully");
-        setSchedules(response.data.schedules);
+      if (response.data.success) {
+        setSuccess("Schedule created successfully");
+        // Refresh schedules
+        const schedulesRes = await axios.get(
+          `${API_BASE_URL}/api/auth/admin/get-schedules`,
+          { headers }
+        );
+        setSchedules(Array.isArray(schedulesRes.data) ? schedulesRes.data : []);
+        // Reset form
+        setNewSchedule({
+          sectionId: "",
+          subjectId: "",
+          day: "",
+          startTime: "",
+          endTime: "",
+          semester: "1st",
+          academicYear: new Date().getFullYear().toString()
+        });
       } else {
-        setError("No schedules were generated. Please check if there are subjects available for the selected section and semester.");
+        setError(response.data.message || "Failed to create schedule");
       }
     } catch (error) {
-      console.error("Error generating schedules:", error);
-      if (error.response && error.response.data && error.response.data.message) {
-        setError(error.response.data.message);
-      } else {
-        setError("Failed to generate schedules. Please try again.");
-      }
+      console.error("Error creating schedule:", error);
+      setError(error.response?.data?.message || "Failed to create schedule");
     } finally {
       setLoading(false);
     }
   };
 
-  // Add this function to handle schedule deletion
-  const handleDeleteSchedules = async () => {
-    if (!window.confirm("Are you sure you want to delete all schedules?")) return;
+  // Add handler for schedule deletion
+  const handleDeleteSchedule = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this schedule?")) return;
 
     try {
       setLoading(true);
       const token = localStorage.getItem("authToken");
-      if (!token) {
-        setError("No authentication token found. Please log in again.");
-        return;
-      }
-
       const headers = {
         Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
       };
 
-      await axios.delete(
+      const response = await axios.delete(
+        `${API_BASE_URL}/api/admin/schedule/${id}`,
+        { headers }
+      );
+
+      if (response.data.success) {
+        setSuccess("Schedule deleted successfully");
+        // Refresh schedules
+        const schedulesRes = await axios.get(
+          `${API_BASE_URL}/api/auth/admin/get-schedules`,
+          { headers }
+        );
+        setSchedules(Array.isArray(schedulesRes.data) ? schedulesRes.data : []);
+      } else {
+        setError(response.data.message || "Failed to delete schedule");
+      }
+    } catch (error) {
+      console.error("Error deleting schedule:", error);
+      setError(error.response?.data?.message || "Failed to delete schedule");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Add this function after handleDeleteSchedule
+  const handleDeleteAllSchedules = async () => {
+    if (!window.confirm("Are you sure you want to delete ALL schedules? This action cannot be undone.")) return;
+
+    try {
+      setLoading(true);
+      const token = localStorage.getItem("authToken");
+      const headers = {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      };
+
+      const response = await axios.delete(
         `${API_BASE_URL}/api/auth/admin/delete-schedules`,
         { headers }
       );
 
-      setSuccess("All schedules deleted successfully");
-      setSchedules([]);
+      if (response.data.success) {
+        setSuccess("All schedules deleted successfully");
+        // Refresh schedules
+        const schedulesRes = await axios.get(
+          `${API_BASE_URL}/api/auth/admin/get-schedules`,
+          { headers }
+        );
+        setSchedules(Array.isArray(schedulesRes.data) ? schedulesRes.data : []);
+      } else {
+        setError(response.data.message || "Failed to delete all schedules");
+      }
     } catch (error) {
-      console.error("Error deleting schedules:", error);
-      setError("Failed to delete schedules. Please try again.");
+      console.error("Error deleting all schedules:", error);
+      setError(error.response?.data?.message || "Failed to delete all schedules");
     } finally {
       setLoading(false);
     }
@@ -807,6 +824,61 @@ const Admin = () => {
         seenSubjects.add(key);
         return true;
       });
+  };
+
+  // Update the getFilteredSubjects function
+  const getFilteredSubjects = (sectionId, semester) => {
+    if (!sectionId) return subjects;
+    
+    const section = sections.find(s => s._id === sectionId);
+    if (!section) return [];
+
+    return subjects.filter(subject => {
+      // Check if the IDs match (handling both populated and unpopulated cases)
+      const courseMatch = 
+        (typeof subject.courseId === 'object' ? subject.courseId._id : subject.courseId) === 
+        (typeof section.courseId === 'object' ? section.courseId._id : section.courseId);
+      
+      const yearMatch = 
+        (typeof subject.yearLevelId === 'object' ? subject.yearLevelId._id : subject.yearLevelId) === 
+        (typeof section.yearId === 'object' ? section.yearId._id : section.yearId);
+      
+      const semesterMatch = subject.semester === semester;
+
+      return courseMatch && yearMatch && semesterMatch;
+    });
+  };
+
+  // Update the getScheduleTable function to handle time slots better
+  const getScheduleTable = (sectionId, semester) => {
+    const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const timeSlots = [
+      '07:00', '08:00', '09:00', '10:00', '11:00', '12:00',
+      '13:00', '14:00', '15:00', '16:00', '17:00', '18:00'
+    ];
+
+    // Filter schedules for the selected section and semester
+    const sectionSchedules = schedules.filter(
+      schedule => 
+        schedule.sectionId._id === sectionId && 
+        schedule.semester === semester
+    );
+
+    // Create the table structure
+    const table = days.map(day => {
+      const daySchedules = sectionSchedules.filter(schedule => schedule.day === day);
+      return {
+        day,
+        schedules: timeSlots.map(time => {
+          const schedule = daySchedules.find(s => 
+            s.startTime <= time && s.endTime > time
+          );
+          return schedule || null;
+        })
+      };
+    });
+
+    return table;
   };
 
   // Clear success message after 3 seconds
@@ -1457,113 +1529,43 @@ const Admin = () => {
             </div>
           )}
 
-          {/* Rooms Section */}
-          {activeTab === "rooms" && (
-            <div>
-              <h2 className="section-header">Room Management</h2>
-              <form onSubmit={handleRoomSubmit} className="admin-form">
-                <div className="form-grid">
-                  <div>
-                    <input
-                      type="text"
-                      placeholder="Room Name"
-                      value={newRoom.room}
-                      onChange={(e) => setNewRoom({ room: e.target.value })}
-                      className={`form-input ${roomErrors.room ? "error" : ""}`}
-                    />
-                    {roomErrors.room && (
-                      <span className="error-text">{roomErrors.room}</span>
-                    )}
-                  </div>
-                </div>
-                <div className="form-actions">
-                  <button
-                    type="submit"
-                    className="submit-button"
-                    disabled={loading}
-                  >
-                    {isEditing ? "Update Room" : "Add Room"}
-                  </button>
-                  {isEditing && (
-                    <button
-                      type="button"
-                      onClick={handleCancelEdit}
-                      className="cancel-button"
-                    >
-                      Cancel
-                    </button>
-                  )}
-                </div>
-              </form>
-              <div className="data-grid">
-                {rooms && rooms.length > 0 ? (
-                  rooms.map((room) => (
-                    <div key={room._id} className="data-card">
-                      <h3 className="data-title">{room.room}</h3>
-                      <div className="action-buttons">
-                        <button
-                          onClick={() => handleEdit(room)}
-                          className="edit-button"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => handleDelete(room._id)}
-                          className="delete-button"
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <p className="empty-state">No rooms found</p>
-                )}
-              </div>
-            </div>
-          )}
-
           {/* Scheduler Section */}
           {activeTab === "scheduler" && (
             <div className="scheduler-container">
               <div className="scheduler-header">
                 <h2 className="section-header">Schedule Management</h2>
-                <div className="scheduler-actions">
-                  <button
-                    onClick={handleGenerateSchedules}
-                    className="action-button generate-button"
-                    disabled={loading}
-                  >
-                    {loading ? "Generating..." : "Generate Schedules"}
-                  </button>
-                  <button
-                    onClick={handleDeleteSchedules}
-                    className="action-button delete-button"
-                    disabled={loading}
-                  >
-                    Delete All Schedules
-                  </button>
-                </div>
+                <button
+                  className="btn-delete-all"
+                  onClick={handleDeleteAllSchedules}
+                  disabled={loading || schedules.length === 0}
+                >
+                  Delete All Schedules
+                </button>
               </div>
 
-              <div className="scheduler-filters">
-                <div className="filter-group">
+              <div className="scheduler-controls">
+                <div className="semester-selector">
                   <label>Semester:</label>
                   <select
                     value={selectedSemester}
-                    onChange={(e) => setSelectedSemester(e.target.value)}
-                    className="filter-select"
+                    onChange={(e) => {
+                      setSelectedSemester(e.target.value);
+                      setNewSchedule(prev => ({ ...prev, semester: e.target.value }));
+                    }}
                   >
                     <option value="1st">1st Semester</option>
                     <option value="2nd">2nd Semester</option>
                   </select>
                 </div>
-                <div className="filter-group">
+                
+                <div className="section-selector">
                   <label>Section:</label>
                   <select
                     value={selectedSection}
-                    onChange={(e) => setSelectedSection(e.target.value)}
-                    className="filter-select"
+                    onChange={(e) => {
+                      setSelectedSection(e.target.value);
+                      setNewSchedule(prev => ({ ...prev, sectionId: e.target.value }));
+                    }}
                   >
                     <option value="">All Sections</option>
                     {sections.map((section) => (
@@ -1575,58 +1577,216 @@ const Admin = () => {
                 </div>
               </div>
 
-              <div className="schedule-display">
-                {loading ? (
-                  <div className="loading-container">
-                    <div className="loading-spinner"></div>
-                    <p>Generating schedules...</p>
+              <div className="schedule-form">
+                <h3>Create New Schedule</h3>
+                <form onSubmit={handleScheduleSubmit}>
+                  <div className="form-group">
+                    <label>Section:</label>
+                    <select
+                      value={newSchedule.sectionId}
+                      onChange={(e) =>
+                        setNewSchedule({ ...newSchedule, sectionId: e.target.value })
+                      }
+                      required
+                    >
+                      <option value="">Select Section</option>
+                      {sections.map((section) => (
+                        <option key={section._id} value={section._id}>
+                          {section.name}
+                        </option>
+                      ))}
+                    </select>
+                    {scheduleErrors.sectionId && (
+                      <span className="error">{scheduleErrors.sectionId}</span>
+                    )}
                   </div>
-                ) : schedules.length === 0 ? (
-                  <div className="empty-state">
-                    <div className="empty-state-icon">📅</div>
-                    <h3>No Schedules Found</h3>
-                    <p>Generate schedules to see them here.</p>
+
+                  <div className="form-group">
+                    <label>Subject:</label>
+                    <select
+                      value={newSchedule.subjectId}
+                      onChange={(e) =>
+                        setNewSchedule({ ...newSchedule, subjectId: e.target.value })
+                      }
+                      required
+                    >
+                      <option value="">Select Subject</option>
+                      {getFilteredSubjects(newSchedule.sectionId, newSchedule.semester).map((subject) => (
+                        <option key={subject._id} value={subject._id}>
+                          {subject.subjectCode} - {subject.subjectName}
+                        </option>
+                      ))}
+                    </select>
+                    {scheduleErrors.subjectId && (
+                      <span className="error">{scheduleErrors.subjectId}</span>
+                    )}
                   </div>
-                ) : (
-                  <div className="schedule-table-wrapper">
+
+                  <div className="form-group">
+                    <label>Day:</label>
+                    <select
+                      value={newSchedule.day}
+                      onChange={(e) =>
+                        setNewSchedule({ ...newSchedule, day: e.target.value })
+                      }
+                      required
+                    >
+                      <option value="">Select Day</option>
+                      <option value="Monday">Monday</option>
+                      <option value="Tuesday">Tuesday</option>
+                      <option value="Wednesday">Wednesday</option>
+                      <option value="Thursday">Thursday</option>
+                      <option value="Friday">Friday</option>
+                      <option value="Saturday">Saturday</option>
+                    </select>
+                    {scheduleErrors.day && (
+                      <span className="error">{scheduleErrors.day}</span>
+                    )}
+                  </div>
+
+                  <div className="form-group">
+                    <label>Start Time:</label>
+                    <input
+                      type="time"
+                      value={newSchedule.startTime}
+                      onChange={(e) =>
+                        setNewSchedule({ ...newSchedule, startTime: e.target.value })
+                      }
+                      required
+                    />
+                    {scheduleErrors.startTime && (
+                      <span className="error">{scheduleErrors.startTime}</span>
+                    )}
+                  </div>
+
+                  <div className="form-group">
+                    <label>End Time:</label>
+                    <input
+                      type="time"
+                      value={newSchedule.endTime}
+                      onChange={(e) =>
+                        setNewSchedule({ ...newSchedule, endTime: e.target.value })
+                      }
+                      required
+                    />
+                    {scheduleErrors.endTime && (
+                      <span className="error">{scheduleErrors.endTime}</span>
+                    )}
+                  </div>
+
+                  <div className="form-group">
+                    <label>Semester:</label>
+                    <select
+                      value={newSchedule.semester}
+                      onChange={(e) =>
+                        setNewSchedule({ ...newSchedule, semester: e.target.value })
+                      }
+                      required
+                    >
+                      <option value="1st">1st Semester</option>
+                      <option value="2nd">2nd Semester</option>
+                    </select>
+                    {scheduleErrors.semester && (
+                      <span className="error">{scheduleErrors.semester}</span>
+                    )}
+                  </div>
+
+                  <button type="submit" className="btn-primary" disabled={loading}>
+                    {loading ? "Creating..." : "Create Schedule"}
+                  </button>
+                </form>
+              </div>
+
+              <div className="schedule-list">
+                <h3>Current Schedules</h3>
+                
+                <div className="schedule-view-controls">
+                  <div className="view-selector">
+                    <select
+                      value={selectedSection}
+                      onChange={(e) => setSelectedSection(e.target.value)}
+                      className="section-select"
+                    >
+                      <option value="">Select Section to View Schedule</option>
+                      {sections.map((section) => (
+                        <option key={section._id} value={section._id}>
+                          {section.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {selectedSection ? (
+                  <div className="schedule-table-container">
                     <table className="schedule-table">
                       <thead>
                         <tr>
-                          <th>Subject Code</th>
-                          <th>Subject Name</th>
-                          <th>Section</th>
-                          <th>Day</th>
-                          <th>Time</th>
-                          <th>Duration</th>
-                          <th>Semester</th>
+                          <th className="time-column">Time</th>
+                          {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map(day => (
+                            <th key={day} className="day-column">{day}</th>
+                          ))}
                         </tr>
                       </thead>
                       <tbody>
-                        {getUniqueSchedules(schedules, selectedSemester)
-                          .filter(schedule => !selectedSection || schedule.sectionId._id === selectedSection)
-                          .map((schedule) => {
-                            const startTime = new Date(`2000-01-01 ${schedule.startTime}`);
-                            const endTime = new Date(`2000-01-01 ${schedule.endTime}`);
-                            const duration = (endTime - startTime) / (1000 * 60 * 60);
-                            
-                            return (
-                              <tr key={schedule._id} className="schedule-row">
-                                <td className="subject-code">{schedule.subjectId.subjectCode}</td>
-                                <td className="subject-name">{schedule.subjectId.subjectName}</td>
-                                <td className="section-name">{schedule.sectionId.name}</td>
-                                <td className="day">{schedule.day}</td>
-                                <td className="time">
-                                  <span className="time-range">
-                                    {schedule.startTime} - {schedule.endTime}
-                                  </span>
-                                </td>
-                                <td className="duration">{duration} hours</td>
-                                <td className="semester">{schedule.semester}</td>
-                              </tr>
-                            );
-                          })}
+                        {['07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00'].map(time => (
+                          <tr key={time}>
+                            <td className="time-slot">{time}</td>
+                            {getScheduleTable(selectedSection, selectedSemester).map(day => (
+                              <td key={`${day.day}-${time}`} className="schedule-cell">
+                                {day.schedules[['07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00'].indexOf(time)] ? (
+                                  <div className="schedule-item">
+                                    <div className="schedule-subject">
+                                      {day.schedules[['07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00'].indexOf(time)].subjectId.subjectCode}
+                                    </div>
+                                    <div className="schedule-subject-name">
+                                      {day.schedules[['07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00'].indexOf(time)].subjectId.subjectName}
+                                    </div>
+                                    <div className="schedule-time-range">
+                                      {day.schedules[['07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00'].indexOf(time)].startTime} - 
+                                      {day.schedules[['07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00'].indexOf(time)].endTime}
+                                    </div>
+                                    <button
+                                      className="btn-delete-schedule"
+                                      onClick={() => handleDeleteSchedule(day.schedules[['07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00'].indexOf(time)]._id)}
+                                    >
+                                      ×
+                                    </button>
+                                  </div>
+                                ) : null}
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
                       </tbody>
                     </table>
+                  </div>
+                ) : (
+                  <div className="schedule-grid">
+                    {schedules
+                      .filter(
+                        (schedule) =>
+                          (!selectedSection || schedule.sectionId._id === selectedSection) &&
+                          schedule.semester === selectedSemester
+                      )
+                      .map((schedule) => (
+                        <div key={schedule._id} className="schedule-card">
+                          <div className="schedule-header">
+                            <h4>{schedule.subjectId.subjectCode}</h4>
+                            <button
+                              className="btn-delete"
+                              onClick={() => handleDeleteSchedule(schedule._id)}
+                            >
+                              Delete
+                            </button>
+                          </div>
+                          <p className="schedule-subject">{schedule.subjectId.subjectName}</p>
+                          <p className="schedule-section">Section: {schedule.sectionId.name}</p>
+                          <p className="schedule-time">
+                            {schedule.day} {schedule.startTime} - {schedule.endTime}
+                          </p>
+                        </div>
+                      ))}
                   </div>
                 )}
               </div>

@@ -25,7 +25,6 @@ module.exports = (app) => {
   app.use("/api/admin/years", require("./access/admin")); // Manage year levels
   app.use("/api/admin/sections", require("./access/admin")); // Manage course sections
   app.use("/api/admin/subjects", require("./access/admin")); // Manage subjects
-  app.use("/api/admin/rooms", require("./access/admin")); // Manage rooms
   app.use("/api/admin/schedule", require("./access/admin"));
 
   /**

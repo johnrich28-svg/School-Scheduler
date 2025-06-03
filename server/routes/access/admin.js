@@ -37,6 +37,11 @@ const {
   getSchedulesBySemester,
   deleteAllSchedules,
 } = require("../../controllers/adminScheduleController");
+const {
+  createManualSchedule,
+  updateSchedule,
+  deleteSchedule,
+} = require("../../controllers/adminScheduleController");
 
 // Admin Approve User
 router.put("/approve-user/:id", protect, isAdmin, approveUser);
@@ -75,5 +80,10 @@ router.get("/get-schedules", protect, isAdmin, getSchedules);
 router.get("/get-schedules/section/:sectionId", protect, isAdmin, getSchedulesBySection);
 router.get("/get-schedules/semester/:semester", protect, isAdmin, getSchedulesBySemester);
 router.delete("/delete-schedules", protect, isAdmin, deleteAllSchedules);
+
+// Manual schedule management routes
+router.post("/schedule", protect, isAdmin, createManualSchedule);
+router.put("/schedule/:id", protect, isAdmin, updateSchedule);
+router.delete("/schedule/:id", protect, isAdmin, deleteSchedule);
 
 module.exports = router;
